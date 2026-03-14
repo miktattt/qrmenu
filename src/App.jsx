@@ -2002,14 +2002,14 @@ function OrderCard({ order, tid, sc, onEdit, onSetStatus, onCancel, isDelivered,
           ) : (
             <span style={{ background: "#f3f4f6", color: "#bbb", borderRadius: 8, padding: "5px 10px", fontSize: 12, fontWeight: 700, cursor: "not-allowed", border: "1px solid #e5e7eb" }}>✏️ Düzenle</span>
           )}
-          {order.status !== "hazırlanıyor" && !isDelivered && (
-            <button onClick={() => onSetStatus("hazırlanıyor")} style={actionBtn("#3b82f6")}>🔵 Hazırlanıyor</button>
+          {order.status !== "hazır" && !isDelivered && (
+            <button onClick={() => onSetStatus("hazır")} style={actionBtn("#16a34a")}>✅ Hazır</button>
           )}
           {!isDelivered && (
             <button onClick={() => onSetStatus("teslim edildi")} style={actionBtn("#10b981")}>🟢 Teslim Et</button>
           )}
           {isDelivered && (
-            <button onClick={() => onSetStatus("hazırlanıyor")} style={actionBtn("#f59e0b")}>↩ Geri Al</button>
+            <button onClick={() => onSetStatus("hazır")} style={actionBtn("#f59e0b")}>↩ Geri Al</button>
           )}
         </div>
       </div>
@@ -3745,15 +3745,18 @@ function WaiterPage({ onBack }) {
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {activeCalls.map((call, idx) => (
-                <div key={call.orderId || idx} style={{ background: "#fff", borderRadius: 14, padding: 16, border: `2px solid ${call.type === "hesap" ? "#ef4444" : "#e8a020"}`, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+                <div key={call.orderId || idx} style={{ background: "#fff", borderRadius: 14, padding: "14px 16px", border: `2px solid ${call.type === "hesap" ? "#ef4444" : "#e8a020"}`, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <span style={{ fontSize: 32 }}>{call.type === "hesap" ? "🧾" : "🙋"}</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                      <span style={{ fontSize: 36 }}>{call.type === "hesap" ? "🧾" : "🙋"}</span>
                       <div>
-                        <div style={{ fontWeight: 700, fontSize: 16, color: call.type === "hesap" ? "#dc2626" : "#92400e" }}>
+                        <div style={{ fontWeight: 700, fontSize: 15, color: call.type === "hesap" ? "#dc2626" : "#92400e" }}>
                           {call.type === "hesap" ? "Hesap İsteniyor" : "Garson Çağrısı"}
                         </div>
-                        <div style={{ color: "#888", fontSize: 13, marginTop: 2 }}>Masa <strong>{call.tableId}</strong> · {call.time}</div>
+                        <div style={{ marginTop: 4 }}>
+                          <span style={{ fontFamily: "'Playfair Display',serif", fontWeight: 900, fontSize: 22, color: "#1c0e00" }}>Masa {call.tableId}</span>
+                          <span style={{ color: "#bbb", fontSize: 12, marginLeft: 8 }}>{call.time}</span>
+                        </div>
                       </div>
                     </div>
                     <button onClick={async () => {
