@@ -90,16 +90,16 @@ function saveSbCfg(cfg) {
   localStorage.setItem(SB_LS_KEY, JSON.stringify(cfg));
 }
 
-// Supabase client — sadece cfg varsa başlatılır
+// Supabase client — cfg yoksa sabit değerler kullanılır
+const DEFAULT_SB_URL = "https://suurktfnjvdlctswdfvl.supabase.co";
+const DEFAULT_SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1dXJrdGZuanZkbGN0c3dkZnZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0NzMyMDEsImV4cCI6MjA4OTA0OTIwMX0.StUbpyIAMHaEUAxqdOjKq1DGs0hPSKRZNJPBHuPglko";
+
 let _sb = null;
 function getSb() {
   if (_sb) return _sb;
   const cfg = getSbCfg();
-  
-  // ✅ Sabit fallback — müşteri telefonunda da çalışır
-  const url = cfg.url || "https://suurktfnjvdlctswdfvl.supabase.co";
-  const key = cfg.key || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1dXJrdGZuanZkbGN0c3dkZnZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0NzMyMDEsImV4cCI6MjA4OTA0OTIwMX0.StUbpyIAMHaEUAxqdOjKq1DGs0hPSKRZNJPBHuPglko";
-  
+  const url = cfg.url || DEFAULT_SB_URL;
+  const key = cfg.key || DEFAULT_SB_KEY;
   if (!url || !key) return null;
   if (!window.supabase) return null;
   try {
