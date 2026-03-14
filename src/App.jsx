@@ -1799,7 +1799,8 @@ function ActiveOrdersTab({ refresh }) {
 
   const SC = {
     beklemede:     { bg: "#fef3c7", col: "#92400e", dot: "#f59e0b", label: "Beklemede" },
-    "hazırlanıyor":{ bg: "#dbeafe", col: "#1e40af", dot: "#3b82f6", label: "Hazırlanıyor" },
+    "hazırlanıyor":{ bg: "#fef3c7", col: "#92400e", dot: "#f59e0b", label: "🍳 Hazırlanıyor" },
+    "hazır":       { bg: "#dcfce7", col: "#16a34a", dot: "#16a34a", label: "✅ Hazır" },
     "teslim edildi":{ bg: "#d1fae5", col: "#065f46", dot: "#10b981", label: "Teslim Edildi" },
   };
 
@@ -2002,14 +2003,26 @@ function OrderCard({ order, tid, sc, onEdit, onSetStatus, onCancel, isDelivered,
           ) : (
             <span style={{ background: "#f3f4f6", color: "#bbb", borderRadius: 8, padding: "5px 10px", fontSize: 12, fontWeight: 700, cursor: "not-allowed", border: "1px solid #e5e7eb" }}>✏️ Düzenle</span>
           )}
-          {order.status !== "hazır" && !isDelivered && (
+          {/* Hazırlanıyor: tıkla → hazır. Hazır: yeşil, pasif göster */}
+          {!isDelivered && order.status === "hazırlanıyor" && (
+            <button onClick={() => onSetStatus("hazır")} style={actionBtn("#f59e0b")}>🍳 Hazırlanıyor</button>
+          )}
+          {!isDelivered && order.status === "hazır" && (
+            <span style={{ background: "#dcfce7", color: "#16a34a", borderRadius: 8, padding: "5px 10px", fontSize: 12, fontWeight: 700, border: "1px solid #16a34a" }}>✅ Hazır</span>
+          )}
+          {!isDelivered && order.status === "beklemede" && (
             <button onClick={() => onSetStatus("hazır")} style={actionBtn("#16a34a")}>✅ Hazır</button>
           )}
+          {/* Teslim Et: sadece hazır durumunda aktif */}
           {!isDelivered && (
-            <button onClick={() => onSetStatus("teslim edildi")} style={actionBtn("#10b981")}>🟢 Teslim Et</button>
+            <button
+              onClick={() => order.status === "hazır" && onSetStatus("teslim edildi")}
+              style={{ ...actionBtn(order.status === "hazır" ? "#10b981" : "#ccc"), cursor: order.status === "hazır" ? "pointer" : "not-allowed" }}>
+              🚀 Teslim Et
+            </button>
           )}
           {isDelivered && (
-            <button onClick={() => onSetStatus("hazır")} style={actionBtn("#f59e0b")}>↩ Geri Al</button>
+            <button onClick={() => onSetStatus("hazırlanıyor")} style={actionBtn("#f59e0b")}>↩ Geri Al</button>
           )}
         </div>
       </div>
