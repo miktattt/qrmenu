@@ -1998,29 +1998,32 @@ function OrderCard({ order, tid, sc, onEdit, onSetStatus, onCancel, isDelivered,
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
         <strong style={{ color: dimmed ? "#10b981" : "#b83a0c", fontSize: 14 }}>{fmt(order.total)}</strong>
         <div style={{ display: "flex", gap: 5, flexWrap: "wrap", alignItems: "center" }}>
-          {!isDelivered ? (
+          {/* Düzenle: hazır + teslim edildi durumunda pasif, diğerlerinde aktif */}
+          {(!isDelivered && order.status !== "hazır") ? (
             <button onClick={onEdit} style={actionBtn("#7c3aed")}>✏️ Düzenle</button>
           ) : (
-            <span style={{ background: "#f3f4f6", color: "#bbb", borderRadius: 8, padding: "5px 10px", fontSize: 12, fontWeight: 700, cursor: "not-allowed", border: "1px solid #e5e7eb" }}>✏️ Düzenle</span>
+            <span style={{ background: "#f3f4f6", color: "#ccc", borderRadius: 8, padding: "5px 10px", fontSize: 12, fontWeight: 700, cursor: "not-allowed", border: "1px solid #e5e7eb" }}>✏️ Düzenle</span>
           )}
-          {/* Hazırlanıyor: tıkla → hazır. Hazır: yeşil, pasif göster */}
-          {!isDelivered && order.status === "hazırlanıyor" && (
-            <button onClick={() => onSetStatus("hazır")} style={actionBtn("#f59e0b")}>🍳 Hazırlanıyor</button>
-          )}
-          {!isDelivered && order.status === "hazır" && (
-            <span style={{ background: "#dcfce7", color: "#16a34a", borderRadius: 8, padding: "5px 10px", fontSize: 12, fontWeight: 700, border: "1px solid #16a34a" }}>✅ Hazır</span>
-          )}
+          {/* beklemede → hazır */}
           {!isDelivered && order.status === "beklemede" && (
             <button onClick={() => onSetStatus("hazır")} style={actionBtn("#16a34a")}>✅ Hazır</button>
           )}
-          {/* Teslim Et: sadece hazır durumunda aktif */}
-          {!isDelivered && (
-            <button
-              onClick={() => order.status === "hazır" && onSetStatus("teslim edildi")}
-              style={{ ...actionBtn(order.status === "hazır" ? "#10b981" : "#ccc"), cursor: order.status === "hazır" ? "pointer" : "not-allowed" }}>
-              🚀 Teslim Et
-            </button>
+          {/* hazırlanıyor → hazır */}
+          {!isDelivered && order.status === "hazırlanıyor" && (
+            <button onClick={() => onSetStatus("hazır")} style={actionBtn("#f59e0b")}>🍳 Hazırlanıyor</button>
           )}
+          {/* hazır → geri al (hazırlanıyor'a döner) + teslim et */}
+          {!isDelivered && order.status === "hazır" && (
+            <>
+              <button onClick={() => onSetStatus("hazırlanıyor")} style={actionBtn("#f59e0b")}>↩ Geri Al</button>
+              <button onClick={() => onSetStatus("teslim edildi")} style={actionBtn("#10b981")}>🚀 Teslim Et</button>
+            </>
+          )}
+          {/* hazır değilse teslim et pasif */}
+          {!isDelivered && order.status !== "hazır" && (
+            <span style={{ background: "#f3f4f6", color: "#ccc", borderRadius: 8, padding: "5px 10px", fontSize: 12, fontWeight: 700, cursor: "not-allowed", border: "1px solid #e5e7eb" }}>🚀 Teslim Et</span>
+          )}
+          {/* teslim edildi → geri al */}
           {isDelivered && (
             <button onClick={() => onSetStatus("hazırlanıyor")} style={actionBtn("#f59e0b")}>↩ Geri Al</button>
           )}
@@ -3627,6 +3630,7 @@ function WaiterPage({ onBack }) {
   const realtimeChannel = useRef(null);
   const knownReadyIds = useRef(new Set());
   const [readyToast, setReadyToast] = useState(null);
+  const { toast: orderToast, dismissToast: dismissOrderToast } = useOrderNotifications(store, refresh);
 
   useEffect(() => {
     if (!auth) return;
@@ -3703,6 +3707,7 @@ function WaiterPage({ onBack }) {
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
         @keyframes readySlide{from{transform:translateY(-20px);opacity:0}to{transform:translateY(0);opacity:1}}
         @keyframes tabBlink{0%,100%{background:rgba(232,160,32,0.1)}50%{background:rgba(232,160,32,0.28)}}
+        @keyframes toastIn{from{opacity:0;transform:translate(-50%,-16px)}to{opacity:1;transform:translate(-50%,0)}}
       `}</style>
 
       {/* Header */}
@@ -3717,6 +3722,22 @@ function WaiterPage({ onBack }) {
           <button onClick={() => { setAuth(false); onBack(); }} style={{ background: "rgba(255,255,255,0.08)", border: "none", color: "#888", borderRadius: 8, padding: "5px 10px", cursor: "pointer", fontSize: 12 }}>Çıkış</button>
         </div>
       </div>
+
+      {/* Yeni sipariş toast */}
+      {orderToast && (
+        <div style={{ position: "fixed", top: 16, left: "50%", transform: "translateX(-50%)", zIndex: 1000, animation: "toastIn 0.35s cubic-bezier(0.34,1.56,0.64,1) forwards", minWidth: 280, maxWidth: 360 }}>
+          <div style={{ background: "linear-gradient(135deg,#1c0e00,#3d1a00)", borderRadius: 16, padding: "14px 16px", display: "flex", alignItems: "center", gap: 14, boxShadow: "0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(232,160,32,0.3)" }}>
+            <div style={{ fontSize: 32, flexShrink: 0 }}>🔔</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ color: "#e8a020", fontWeight: 700, fontSize: 15, fontFamily: "'Playfair Display',serif" }}>Yeni Sipariş!</div>
+              <div style={{ color: "#d4966a", fontSize: 13, marginTop: 2 }}>
+                Masa <strong style={{ color: "#fff" }}>{orderToast.tableId}</strong> — {orderToast.itemCount} çeşit ürün
+              </div>
+            </div>
+            <button onClick={dismissOrderToast} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: "#aaa", borderRadius: 8, width: 28, height: 28, cursor: "pointer", fontSize: 14, flexShrink: 0 }}>✕</button>
+          </div>
+        </div>
+      )}
 
       {/* Hazır toast */}
       {readyToast && (
