@@ -708,6 +708,17 @@ function MenuPage({ tableId, onBack, viewOnly = false }) {
   const [showHistory, setShowHistory] = useState(false);
   const [showCallMenu, setShowCallMenu] = useState(false);
   const [callSent, setCallSent] = useState(null); // "garson" | "hesap" | null
+  const realtimeChannel = useRef(null);
+
+  // Müşteri sayfası da Supabase'i dinlesin — sipariş durumu güncellensin
+  useEffect(() => {
+    if (viewOnly) return;
+    loadSupabaseSdk(async () => {
+      await syncFromSupabase();
+      realtimeChannel.current = subscribeToOrders(async () => { await syncFromSupabase(); });
+    });
+    return () => { if (realtimeChannel.current) { unsubscribe(realtimeChannel.current); realtimeChannel.current = null; } };
+  }, []);
 
   const allItems = store.categories.flatMap(c => c.items);
 
@@ -783,8 +794,8 @@ function MenuPage({ tableId, onBack, viewOnly = false }) {
   // Sipariş geçmişi popup
   if (showHistory) {
     const myOrders = [
-      ...(gs().activeOrders[tableId] || []),
-      ...(gs().completedOrders || []).filter(o => String(o.tableId) === String(tableId)),
+      ...(store.activeOrders[tableId] || []),
+      ...(store.completedOrders || []).filter(o => String(o.tableId) === String(tableId)),
     ].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)).slice(0, 20);
 
     return (
@@ -3602,7 +3613,7 @@ function KitchenPage({ onBack }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// GARSON PANELİ
+// GARSON PANELİ — Admin panel bileşenlerini direkt kullanır
 // ═══════════════════════════════════════════════════════════════════════════════
 function WaiterPage({ onBack }) {
   const [auth, setAuth] = useState(false);
@@ -3610,8 +3621,6 @@ function WaiterPage({ onBack }) {
   const [err, setErr] = useState(false);
   const [shake, setShake] = useState(false);
   const [tab, setTab] = useState("siparisler");
-  const [printModal, setPrintModal] = useState(null);
-  const [editOrder, setEditOrder] = useState(null);
   const { store, refresh } = useStore();
   const realtimeChannel = useRef(null);
   const knownReadyIds = useRef(new Set());
@@ -3626,10 +3635,8 @@ function WaiterPage({ onBack }) {
     return () => { if (realtimeChannel.current) { unsubscribe(realtimeChannel.current); realtimeChannel.current = null; } };
   }, [auth]);
 
-  // Hazır olan siparişleri bildir
-  const allOrdersKey = JSON.stringify(
-    Object.values(store.activeOrders).flat().map(o => o.id + "_" + o.status).sort()
-  );
+  // Hazır bildirim
+  const allOrdersKey = JSON.stringify(Object.values(store.activeOrders).flat().map(o => o.id + "_" + o.status).sort());
   useEffect(() => {
     if (!auth) return;
     const readyOrders = Object.values(store.activeOrders).flat().filter(o => o.status === "hazır");
@@ -3659,45 +3666,6 @@ function WaiterPage({ onBack }) {
     else { setErr(true); setShake(true); setPw(""); setTimeout(() => setShake(false), 500); }
   };
 
-  const setOrderStatus = async (tid, orderId, status) => {
-    const s = gs();
-    const order = (s.activeOrders[tid] || []).find(o => o.id === orderId);
-    if (!order) return;
-    s.activeOrders[tid] = s.activeOrders[tid].map(o => o.id === orderId ? { ...o, status } : o);
-    ss(s); refresh();
-    await pushOrderToSb({ ...order, status });
-  };
-
-  const closeTable = async (tid) => {
-    const s = gs();
-    const orders = s.activeOrders[tid] || [];
-    s.completedOrders = s.completedOrders || [];
-    const allItems = {};
-    let grandTotal = 0;
-    orders.forEach(o => {
-      o.items.forEach(item => {
-        if (!allItems[item.id]) allItems[item.id] = { ...item, qty: 0 };
-        allItems[item.id].qty += item.qty;
-      });
-      grandTotal += o.total;
-    });
-    s.completedOrders.push({ id: Date.now(), tableId: Number(tid), items: Object.values(allItems), total: grandTotal, time: orders[0]?.time || "", date: orders[0]?.date || new Date().toLocaleDateString("tr-TR"), completedAt: new Date().toLocaleString("tr-TR"), completedTimestamp: Date.now(), orderCount: orders.length });
-    for (const o of orders) await pushOrderToSb({ ...o, status: "tamamlandı" });
-    delete s.activeOrders[tid];
-    ss(s); refresh();
-  };
-
-  const approveRes = async (id) => {
-    const s = gs(); const res = s.reservations.find(r => r.id === id);
-    s.reservations = s.reservations.map(r => r.id === id ? { ...r, status: "onaylı" } : r);
-    ss(s); refresh(); if (res) await pushReservationToSb({ ...res, status: "onaylı" });
-  };
-  const cancelRes = async (id) => {
-    const s = gs(); const res = s.reservations.find(r => r.id === id);
-    s.reservations = s.reservations.map(r => r.id === id ? { ...r, status: "iptal" } : r);
-    ss(s); refresh(); if (res) await pushReservationToSb({ ...res, status: "iptal" });
-  };
-
   // ── Giriş ──
   if (!auth) return (
     <div style={{ minHeight: "100vh", background: "linear-gradient(160deg,#0f0700,#1c0e00)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, fontFamily: "'Lato',sans-serif" }}>
@@ -3719,28 +3687,20 @@ function WaiterPage({ onBack }) {
   );
 
   // ── Veri ──
-  const activeTables = Object.entries(store.activeOrders)
-    .filter(([, os]) => os.length > 0)
-    .sort(([a], [b]) => Number(a) - Number(b));
-
-  const activeCalls = (Array.isArray(store.tableCalls) ? store.tableCalls : []).filter(c => !c.read).sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+  const pendingCount = Object.values(store.activeOrders).flat().filter(o => o.status !== "teslim edildi").length;
+  const readyCount = Object.values(store.activeOrders).flat().filter(o => o.status === "hazır").length;
+  const activeCalls = (Array.isArray(store.tableCalls) ? store.tableCalls : []).filter(c => !c.read);
   const callCount = activeCalls.length;
   const today = new Date().toISOString().slice(0, 10);
-  const reservations = (store.reservations || []).filter(r => r.date >= today && r.status !== "iptal").sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
-  const pendingResCount = reservations.filter(r => r.status === "beklemede").length;
-  const readyCount = Object.values(store.activeOrders).flat().filter(o => o.status === "hazır").length;
-
-  const statusColor = (s) => ({ beklemede: "#f59e0b", "hazırlanıyor": "#ca8a04", hazır: "#16a34a", "teslim edildi": "#9ca3af" })[s] || "#9ca3af";
-  const statusLabel = (s) => ({ beklemede: "🔴 Bekliyor", "hazırlanıyor": "🍳 Hazırlanıyor", hazır: "✅ Hazır!", "teslim edildi": "✓ Teslim Edildi" })[s] || s;
-  const statusBg = (s) => ({ beklemede: "#fef9c3", "hazırlanıyor": "#fef3c7", hazır: "#dcfce7", "teslim edildi": "#f3f4f6" })[s] || "#f3f4f6";
+  const pendingResCount = (store.reservations || []).filter(r => r.date >= today && r.status === "beklemede").length;
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f8f5f0", fontFamily: "'Lato',sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "#f5f0ea", fontFamily: "'Lato',sans-serif" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Lato:wght@400;700&display=swap');
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
-        @keyframes tabBlink{0%,100%{background:rgba(232,160,32,0.1)}50%{background:rgba(232,160,32,0.25)}}
         @keyframes readySlide{from{transform:translateY(-20px);opacity:0}to{transform:translateY(0);opacity:1}}
+        @keyframes tabBlink{0%,100%{background:rgba(232,160,32,0.1)}50%{background:rgba(232,160,32,0.28)}}
       `}</style>
 
       {/* Header */}
@@ -3751,12 +3711,12 @@ function WaiterPage({ onBack }) {
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           {readyCount > 0 && <span style={{ background: "#22c55e", color: "#fff", borderRadius: 20, padding: "3px 10px", fontSize: 12, fontWeight: 700, animation: "pulse 1s infinite" }}>✅ {readyCount} hazır</span>}
-          {callCount > 0 && <span style={{ background: "#e8a020", color: "#1c0e00", borderRadius: 20, padding: "3px 10px", fontSize: 12, fontWeight: 700, animation: "pulse 1s infinite" }}>🔔 {callCount} çağrı</span>}
+          {callCount > 0 && <span style={{ background: "#e8a020", color: "#1c0e00", borderRadius: 20, padding: "3px 10px", fontSize: 12, fontWeight: 700, animation: "pulse 1s infinite" }}>🔔 {callCount}</span>}
           <button onClick={() => { setAuth(false); onBack(); }} style={{ background: "rgba(255,255,255,0.08)", border: "none", color: "#888", borderRadius: 8, padding: "5px 10px", cursor: "pointer", fontSize: 12 }}>Çıkış</button>
         </div>
       </div>
 
-      {/* Hazır sipariş toast */}
+      {/* Hazır toast */}
       {readyToast && (
         <div style={{ background: "#16a34a", color: "#fff", padding: "12px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", animation: "readySlide .3s both" }}>
           <span style={{ fontWeight: 700, fontSize: 15 }}>✅ Masa {readyToast.tableId} hazır! Servis edilebilir.</span>
@@ -3765,16 +3725,16 @@ function WaiterPage({ onBack }) {
       )}
 
       {/* Sekmeler */}
-      <div style={{ display: "flex", background: "#fff", borderBottom: "2px solid #e8e0d5" }}>
+      <div style={{ display: "flex", background: "#fff", borderBottom: "2px solid #e8e0d5", overflowX: "auto" }}>
         {[
-          { id: "siparisler", label: `🍽️ Siparişler${readyCount ? ` ✅${readyCount}` : ""}` },
-          { id: "cagrilar",   label: `🔔 Çağrılar${callCount ? ` ${callCount}` : ""}`, blink: callCount > 0 },
+          { id: "siparisler",     label: `Siparişler${pendingCount ? ` 🔴${pendingCount}` : ""}` },
+          { id: "cagrilar",       label: `🔔 Çağrılar${callCount ? ` ${callCount}` : ""}`, blink: callCount > 0 },
           { id: "rezervasyonlar", label: `📅 Rezervasyonlar${pendingResCount ? ` 🟡${pendingResCount}` : ""}` },
         ].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
-            style={{ flex: 1, padding: "13px 8px", border: "none",
+            style={{ flex: "1 0 auto", padding: "13px 10px", border: "none",
               borderBottom: tab === t.id ? "3px solid #b83a0c" : "3px solid transparent",
-              background: t.blink && tab !== t.id ? "transparent" : "none",
+              background: "none",
               color: tab === t.id ? "#b83a0c" : t.blink ? "#e8a020" : "#888",
               fontWeight: tab === t.id || t.blink ? 700 : 400, fontSize: 13,
               cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
@@ -3784,301 +3744,45 @@ function WaiterPage({ onBack }) {
         ))}
       </div>
 
-      <div style={{ padding: 14, maxWidth: 700, margin: "0 auto" }}>
-
-        {/* ── SİPARİŞLER ── */}
-        {tab === "siparisler" && (
-          activeTables.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "60px 0", color: "#bbb" }}>
-              <div style={{ fontSize: 48, marginBottom: 12 }}>🍽️</div>
-              <div>Aktif masa yok</div>
-            </div>
-          ) : activeTables.map(([tid, orders]) => {
-            const pending = orders.filter(o => o.status !== "teslim edildi").sort((a,b) => (a.timestamp||0)-(b.timestamp||0));
-            const delivered = orders.filter(o => o.status === "teslim edildi").sort((a,b) => (a.timestamp||0)-(b.timestamp||0));
-            const allDelivered = orders.length > 0 && orders.every(o => o.status === "teslim edildi");
-            const grandTotal = orders.reduce((s, o) => s + o.total, 0);
-            const hasReady = orders.some(o => o.status === "hazır");
-            const hasPreparing = orders.some(o => o.status === "hazırlanıyor");
-            const openedAt = gs().tableOpenedAt?.[tid];
-            const durationMin = openedAt ? Math.round((Date.now() - openedAt) / 60000) : null;
-
-            return (
-              <div key={tid} style={{ background: "#fff", borderRadius: 16, marginBottom: 16, overflow: "hidden", boxShadow: hasReady ? "0 0 0 3px #22c55e" : hasPreparing ? "0 0 0 2px #ca8a04" : "0 2px 12px rgba(0,0,0,0.08)", border: "1px solid #f0e8de", transition: "box-shadow .3s" }}>
-                {/* Masa header */}
-                <div style={{ background: "#1c0e00", padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                    <span style={{ color: "#e8a020", fontWeight: 700, fontSize: 18, fontFamily: "'Playfair Display',serif" }}>Masa {tid}</span>
-                    {hasReady && <span style={{ background: "#22c55e", color: "#fff", borderRadius: 20, padding: "2px 10px", fontSize: 11, fontWeight: 700, animation: "pulse 1s infinite" }}>✅ HAZIR!</span>}
-                    {durationMin !== null && <span style={{ color: "#7a5535", fontSize: 11 }}>⏱ {durationMin} dk</span>}
-                    {/* Çağrı badge */}
-                    {(Array.isArray(store.tableCalls)?store.tableCalls:[]).filter(c=>c.tableId==tid&&!c.read).map(call => (
-                      <span key={call.orderId||call.type} style={{ background: call.type==="hesap"?"#ef4444":"#e8a020", color: call.type==="hesap"?"#fff":"#1c0e00", borderRadius:20, padding:"2px 8px", fontSize:11, fontWeight:700, animation:"pulse 1s infinite" }}>
-                        {call.type==="hesap"?"🧾 Hesap!":"🙋 Garson!"}
-                      </span>
-                    ))}
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ color: "#e8a020", fontWeight: 700 }}>{fmt(grandTotal)}</span>
-                    <button onClick={() => setPrintModal(tid)} style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", color: "#ccc", borderRadius: 8, padding: "5px 9px", fontSize: 13, cursor: "pointer" }}>🖨️</button>
-                    {allDelivered && <button onClick={() => closeTable(tid)} style={{ background: "#6d28d9", color: "#fff", border: "none", borderRadius: 8, padding: "5px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>✅ Kapat</button>}
-                  </div>
-                </div>
-
-                {/* Aktif Siparişler */}
-                {pending.map(order => (
-                  <div key={order.id} style={{ borderBottom: "1px solid #f5ede5", padding: "10px 16px" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ background: statusBg(order.status), color: statusColor(order.status), borderRadius: 20, padding: "2px 10px", fontSize: 12, fontWeight: 700, transition: "all .5s" }}>{statusLabel(order.status)}</span>
-                        <span style={{ color: "#bbb", fontSize: 11 }}>{order.time}</span>
-                      </div>
-
-                    </div>
-                    {order.items.map((item, i) => (
-                      <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, padding: "3px 0" }}>
-                        <span style={{ color: "#3a2010" }}>{item.qty}× {item.name}{item.variants&&Object.keys(item.variants).length>0?" ("+Object.values(item.variants).join(", ")+")":""}</span>
-                        <span style={{ color: "#b83a0c" }}>{fmt(item.price * item.qty)}</span>
-                      </div>
-                    ))}
-                    {order.note && <div style={{ marginTop: 6, background: "#fff9f0", borderRadius: 6, padding: "5px 8px", fontSize: 11, color: "#e8a020" }}>📝 {order.note}</div>}
-                    {/* 3 küçük buton */}
-                    <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
-                      {/* Hazır butonu */}
-                      <button
-                        onClick={() => (order.status === "hazırlanıyor") && setOrderStatus(tid, order.id, "hazır")}
-                        style={{
-                          flex: 1, border: order.status === "hazırlanıyor" ? "2px solid #16a34a" : "none",
-                          borderRadius: 8, padding: "8px 6px", fontSize: 12, fontWeight: 700,
-                          cursor: order.status === "hazırlanıyor" ? "pointer" : "default",
-                          background: order.status === "hazır" ? "#16a34a" : order.status === "hazırlanıyor" ? "#f0fdf4" : "#f3f4f6",
-                          color: order.status === "hazır" ? "#fff" : order.status === "hazırlanıyor" ? "#16a34a" : "#bbb",
-                          transition: "all .3s"
-                        }}>
-                        {order.status === "hazır" ? "✅ Hazır" : "✅ Hazır"}
-                      </button>
-                      {/* Düzenle */}
-                      <button onClick={() => setEditOrder({ order: { ...order, items: [...order.items] }, tid })}
-                        style={{ flex: 1, background: "#f5f0ea", border: "1px solid #e5d5c5", color: "#8a6040", borderRadius: 8, padding: "8px 6px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                        ✏️ Düzenle
-                      </button>
-                      {/* Teslim Edildi — sadece hazır durumunda aktif */}
-                      <button
-                        onClick={() => order.status === "hazır" && setOrderStatus(tid, order.id, "teslim edildi")}
-                        style={{
-                          flex: 1, border: "none", borderRadius: 8, padding: "8px 6px", fontSize: 12, fontWeight: 700,
-                          cursor: order.status === "hazır" ? "pointer" : "not-allowed",
-                          background: order.status === "hazır" ? "#2563eb" : "#f3f4f6",
-                          color: order.status === "hazır" ? "#fff" : "#bbb",
-                          transition: "all .3s"
-                        }}>
-                        🚀 Teslim
-                      </button>
-                    </div>
-                  </div>
-                ))}
-
-                {/* Teslim Edildi (soluk, altta) */}
-                {delivered.length > 0 && (
-                  <div style={{ borderTop: "2px dashed #e8d5c5", marginTop: 4 }}>
-                    <div style={{ padding: "6px 16px", fontSize: 11, color: "#bbb", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>✓ Teslim Edilenler</div>
-                    {delivered.map(order => (
-                      <div key={order.id} style={{ padding: "8px 16px", borderBottom: "1px solid #f5ede5", opacity: 0.55 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                          <span style={{ background: "#f3f4f6", color: "#9ca3af", borderRadius: 20, padding: "2px 10px", fontSize: 11, fontWeight: 700 }}>✓ Teslim Edildi</span>
-                          <span style={{ color: "#ccc", fontSize: 11 }}>{order.time}</span>
-                        </div>
-                        {order.items.map((item, i) => (
-                          <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "2px 0", color: "#aaa" }}>
-                            <span>{item.qty}× {item.name}</span>
-                            <span>{fmt(item.price * item.qty)}</span>
-                          </div>
-                        ))}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })
-        )}
-
-        {/* ── ÇAĞRILAR ── */}
+      {/* İçerik — Admin panel bileşenlerini direkt kullan */}
+      <div style={{ padding: 16, maxWidth: 700, margin: "0 auto" }}>
+        {tab === "siparisler" && <ActiveOrdersTab refresh={refresh} />}
         {tab === "cagrilar" && (
           activeCalls.length === 0 ? (
             <div style={{ textAlign: "center", padding: "60px 0", color: "#bbb" }}>
               <div style={{ fontSize: 48, marginBottom: 12 }}>🔔</div>
               <div>Bekleyen çağrı yok</div>
             </div>
-          ) : activeCalls.map((call, idx) => (
-            <div key={call.orderId||idx} style={{ background: "#fff", borderRadius: 14, marginBottom: 12, padding: 16, border: `2px solid ${call.type==="hesap"?"#ef4444":"#e8a020"}`, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <span style={{ fontSize: 32 }}>{call.type==="hesap"?"🧾":"🙋"}</span>
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: 16, color: call.type==="hesap"?"#dc2626":"#92400e" }}>{call.type==="hesap"?"Hesap İsteniyor":"Garson Çağrısı"}</div>
-                    <div style={{ color: "#888", fontSize: 13, marginTop: 2 }}>Masa <strong>{call.tableId}</strong> · {call.time}</div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {activeCalls.map((call, idx) => (
+                <div key={call.orderId || idx} style={{ background: "#fff", borderRadius: 14, padding: 16, border: `2px solid ${call.type === "hesap" ? "#ef4444" : "#e8a020"}`, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <span style={{ fontSize: 32 }}>{call.type === "hesap" ? "🧾" : "🙋"}</span>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: 16, color: call.type === "hesap" ? "#dc2626" : "#92400e" }}>
+                          {call.type === "hesap" ? "Hesap İsteniyor" : "Garson Çağrısı"}
+                        </div>
+                        <div style={{ color: "#888", fontSize: 13, marginTop: 2 }}>Masa <strong>{call.tableId}</strong> · {call.time}</div>
+                      </div>
+                    </div>
+                    <button onClick={async () => {
+                      const s = gs();
+                      const calls = Array.isArray(s.tableCalls) ? s.tableCalls : [];
+                      const c = calls.find(c => c.orderId === call.orderId);
+                      if (c) { c.read = true; ss(s); refresh(); if (c.orderId) await sbDelete("orders", c.orderId); }
+                    }} style={{ background: "#16a34a", color: "#fff", border: "none", borderRadius: 10, padding: "10px 18px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
+                      ✓ Görüldü
+                    </button>
                   </div>
                 </div>
-                <button onClick={async () => {
-                  const s = gs();
-                  const calls = Array.isArray(s.tableCalls) ? s.tableCalls : [];
-                  const c = calls.find(c => c.orderId === call.orderId);
-                  if (c) { c.read = true; ss(s); refresh(); if (c.orderId) await sbDelete("orders", c.orderId); }
-                }} style={{ background: "#16a34a", color: "#fff", border: "none", borderRadius: 10, padding: "10px 18px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
-                  ✓ Görüldü
-                </button>
-              </div>
+              ))}
             </div>
-          ))
+          )
         )}
-
-        {/* ── REZERVASYONLAR ── */}
-        {tab === "rezervasyonlar" && (
-          reservations.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "60px 0", color: "#bbb" }}>
-              <div style={{ fontSize: 48, marginBottom: 12 }}>📅</div>
-              <div>Yaklaşan rezervasyon yok</div>
-            </div>
-          ) : reservations.map(r => {
-            const rs = r.status === "beklemede" ? { bg: "#fef9c3", color: "#713f12", label: "⏳ Bekliyor" } : { bg: "#dcfce7", color: "#166534", label: "✓ Onaylı" };
-            return (
-              <div key={r.id} style={{ background: "#fff", borderRadius: 14, marginBottom: 10, padding: 16, border: "1px solid #f0e8de", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: 15, color: "#1c0e00" }}>{r.name}</div>
-                    <div style={{ color: "#888", fontSize: 12, marginTop: 2 }}>{r.phone}</div>
-                  </div>
-                  <span style={{ background: rs.bg, color: rs.color, borderRadius: 20, padding: "3px 10px", fontSize: 12, fontWeight: 700 }}>{rs.label}</span>
-                </div>
-                <div style={{ display: "flex", gap: 14, fontSize: 13, color: "#6a4820", flexWrap: "wrap", marginBottom: 10 }}>
-                  <span>📅 {r.date}</span><span>🕐 {r.time}</span><span>👥 {r.guests} kişi</span>
-                  {r.note && <span>📝 {r.note}</span>}
-                </div>
-                {r.status === "beklemede" && (
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button onClick={() => approveRes(r.id)} style={{ flex: 1, background: "#16a34a", color: "#fff", border: "none", borderRadius: 8, padding: "9px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>✓ Onayla</button>
-                    <button onClick={() => cancelRes(r.id)} style={{ flex: 1, background: "#dc2626", color: "#fff", border: "none", borderRadius: 8, padding: "9px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>✕ İptal</button>
-                  </div>
-                )}
-                {r.status === "onaylı" && (
-                  <button onClick={() => cancelRes(r.id)} style={{ background: "#fee2e2", color: "#991b1b", border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 12, cursor: "pointer" }}>İptal Et</button>
-                )}
-              </div>
-            );
-          })
-        )}
+        {tab === "rezervasyonlar" && <AdminReservationTab refresh={refresh} />}
       </div>
-
-      {/* Print Modal */}
-      {printModal && <PrintModal tid={printModal} orders={gs().activeOrders[printModal]||[]} onClose={() => setPrintModal(null)} />}
-
-      {/* Sipariş Düzenleme */}
-      {editOrder && (() => {
-        const menuItems = gs().categories.flatMap(c => c.items.filter(i => i.avail));
-        const addToEdit = (menuItem) => {
-          setEditOrder(p => {
-            const items = [...p.order.items];
-            const existing = items.findIndex(i => i.id === menuItem.id && !i.variants);
-            if (existing >= 0) {
-              items[existing] = { ...items[existing], qty: items[existing].qty + 1 };
-            } else {
-              items.push({ ...menuItem, qty: 1 });
-            }
-            return { ...p, order: { ...p.order, items } };
-          });
-        };
-        return (
-          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 400, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setEditOrder(null)}>
-            <div style={{ background: "#fff", borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 500, maxHeight: "90vh", display: "flex", flexDirection: "column" }} onClick={e => e.stopPropagation()}>
-              
-              {/* Başlık */}
-              <div style={{ padding: "16px 20px 12px", borderBottom: "1px solid #f0e8de", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: 17, color: "#1c0e00" }}>✏️ Sipariş Düzenle — Masa {editOrder.tid}</div>
-                <button onClick={() => setEditOrder(null)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#888" }}>✕</button>
-              </div>
-
-              <div style={{ overflowY: "auto", flex: 1, padding: "0 20px" }}>
-
-                {/* Mevcut ürünler */}
-                <div style={{ paddingTop: 12 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "#a07850", letterSpacing: 1, textTransform: "uppercase", marginBottom: 8 }}>Siparişteki Ürünler</div>
-                  {editOrder.order.items.length === 0 && (
-                    <div style={{ color: "#ccc", fontSize: 13, padding: "8px 0 12px" }}>Sepet boş</div>
-                  )}
-                  {editOrder.order.items.map((item, i) => (
-                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 0", borderBottom: "1px solid #f5ede5" }}>
-                      <div style={{ flex: 1, fontSize: 14, fontWeight: 600, color: "#3a2010" }}>
-                        {item.name}
-                        {item.variants && Object.keys(item.variants).length > 0 &&
-                          <span style={{ color: "#aaa", fontSize: 11, marginLeft: 6 }}>({Object.values(item.variants).join(", ")})</span>}
-                      </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <button onClick={() => setEditOrder(p => { const items=[...p.order.items]; if(items[i].qty>1)items[i]={...items[i],qty:items[i].qty-1};else items.splice(i,1); return{...p,order:{...p.order,items}}; })}
-                          style={{ background: "#fee2e2", color: "#b91c1c", border: "none", borderRadius: 6, width: 28, height: 28, fontSize: 16, cursor: "pointer" }}>−</button>
-                        <span style={{ fontWeight: 700, minWidth: 22, textAlign: "center", color: "#b83a0c", fontSize: 14 }}>{item.qty}</span>
-                        <button onClick={() => setEditOrder(p => { const items=[...p.order.items]; items[i]={...items[i],qty:items[i].qty+1}; return{...p,order:{...p.order,items}}; })}
-                          style={{ background: "#dcfce7", color: "#166534", border: "none", borderRadius: 6, width: 28, height: 28, fontSize: 16, cursor: "pointer" }}>+</button>
-                      </div>
-                      <span style={{ color: "#b83a0c", minWidth: 52, textAlign: "right", fontSize: 13, fontWeight: 600 }}>{fmt(item.price * item.qty)}</span>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Menüden ekle */}
-                <div style={{ paddingTop: 16, paddingBottom: 4 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "#a07850", letterSpacing: 1, textTransform: "uppercase", marginBottom: 10 }}>Menüden Ekle</div>
-                  {gs().categories.filter(c => c.items.some(i => i.avail)).map(cat => (
-                    <div key={cat.id} style={{ marginBottom: 14 }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: "#b83a0c", marginBottom: 6 }}>{cat.icon} {cat.name}</div>
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 6 }}>
-                        {cat.items.filter(i => i.avail).map(menuItem => {
-                          const inCart = editOrder.order.items.find(i => i.id === menuItem.id);
-                          return (
-                            <button key={menuItem.id} onClick={() => addToEdit(menuItem)}
-                              style={{ background: inCart ? "#fff5f2" : "#f9f6f2", border: inCart ? "1.5px solid #b83a0c" : "1.5px solid #e5d5c5", borderRadius: 10, padding: "8px 10px", cursor: "pointer", textAlign: "left", fontFamily: "inherit" }}>
-                              <div style={{ fontSize: 12, fontWeight: 600, color: "#3a2010", marginBottom: 2 }}>{menuItem.name}</div>
-                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                <span style={{ fontSize: 12, color: "#b83a0c", fontWeight: 700 }}>{fmt(menuItem.price)}</span>
-                                {inCart && <span style={{ fontSize: 11, color: "#b83a0c", fontWeight: 700 }}>×{inCart.qty}</span>}
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Not */}
-                <textarea value={editOrder.order.note || ""} onChange={e => setEditOrder(p => ({ ...p, order: { ...p.order, note: e.target.value } }))}
-                  rows={2} placeholder="Sipariş notu..."
-                  style={{ width: "100%", marginTop: 4, marginBottom: 4, border: "1px solid #f0e8de", borderRadius: 8, padding: "8px 10px", fontSize: 13, fontFamily: "inherit", resize: "none", boxSizing: "border-box", outline: "none" }} />
-              </div>
-
-              {/* Footer — toplam + kaydet */}
-              <div style={{ padding: "12px 20px 20px", borderTop: "1px solid #f0e8de", flexShrink: 0, background: "#fff" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
-                  <span style={{ color: "#888", fontSize: 14 }}>Toplam</span>
-                  <span style={{ fontWeight: 700, color: "#b83a0c", fontSize: 18 }}>{fmt(editOrder.order.items.reduce((s, i) => s + i.price * i.qty, 0))}</span>
-                </div>
-                <button onClick={async () => {
-                  const s = gs();
-                  const newTotal = editOrder.order.items.reduce((sum, i) => sum + i.price * i.qty, 0);
-                  const updated = { ...editOrder.order, total: newTotal };
-                  if (s.activeOrders[editOrder.tid]) {
-                    s.activeOrders[editOrder.tid] = s.activeOrders[editOrder.tid].map(o => o.id === updated.id ? updated : o);
-                    ss(s); refresh(); await pushOrderToSb(updated);
-                  }
-                  setEditOrder(null);
-                }} style={{ width: "100%", background: "#16a34a", color: "#fff", border: "none", borderRadius: 10, padding: "13px", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>
-                  💾 Kaydet
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
     </div>
   );
 }
