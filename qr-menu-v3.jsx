@@ -95,10 +95,15 @@ let _sb = null;
 function getSb() {
   if (_sb) return _sb;
   const cfg = getSbCfg();
-  if (!cfg.url || !cfg.key) return null;
+  
+  // ✅ Sabit fallback — müşteri telefonunda da çalışır
+  const url = cfg.url || "https://suurktfnjvdlctswdfvl.supabase.co";
+  const key = cfg.key || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1dXJrdGZuanZkbGN0c3dkZnZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0NzMyMDEsImV4cCI6MjA4OTA0OTIwMX0.StUbpyIAMHaEUAxqdOjKq1DGs0hPSKRZNJPBHuPglko";
+  
+  if (!url || !key) return null;
   if (!window.supabase) return null;
   try {
-    _sb = window.supabase.createClient(cfg.url, cfg.key);
+    _sb = window.supabase.createClient(url, key);
     return _sb;
   } catch(e) { return null; }
 }
