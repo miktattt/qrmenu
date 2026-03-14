@@ -1,21 +1,29 @@
 # QR Menu (v3)
 
-A single-file React-based QR menu app for restaurants, written in plain JSX.
+A small React-based QR menu app for restaurants. This repo is configured as a Vite project for easy local development and deployment.
 
-## Usage
+## Run locally
 
-1. Place `qr-menu-v3.jsx` in a React project (e.g., Vite, Create React App).
-2. Import and render:
-
-```jsx
-import App from './qr-menu-v3.jsx';
-
-function Root() {
-  return <App />;
-}
+```bash
+npm install
+npm run dev
 ```
 
-## Notes
+Then open the URL shown in the terminal (usually `http://localhost:5173`).
 
-- The app stores data in `localStorage` and can sync with Supabase if configured.
-- Adjust restaurant menu data in the `INITIAL_STORE` constant.
+## Build for production
+
+```bash
+npm run build
+npm run preview
+```
+
+## Deploy (Coolify / any static host)
+
+- Coolify can deploy this as a Node/Vite app using the `npm run build` command.
+- The production output is in `dist/`.
+
+## Customization
+
+- Menu data lives in `src/App.jsx` under the `INITIAL_STORE` constant.
+- The app stores data in `localStorage` and can optionally sync with Supabase if you configure access keys.
