@@ -909,13 +909,7 @@ function MenuPage({ tableId, onBack, viewOnly = false }) {
             <div style={{ color: "#e8a020", fontFamily: "'Playfair Display',Georgia,serif", fontSize: 22, fontWeight: 700 }}>{store.restaurant.logo} {store.restaurant.name}</div>
             <div style={{ color: "#7a5535", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginTop: 2 }}>{store.restaurant.tagline}</div>
           </div>
-          {!viewOnly && (
-            <button onClick={() => setShowCart(true)}
-              style={{ position: "relative", background: cartCount ? "#b83a0c" : "rgba(255,255,255,0.08)", border: "none", color: "#fff", borderRadius: 14, padding: "12px 18px", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, fontSize: 14, fontWeight: 700, transition: "all .2s", minWidth: 90, justifyContent: "center" }}>
-              {cartCount > 0 && <span style={{ position: "absolute", top: -6, right: -6, background: "#e8a020", color: "#1c0e00", borderRadius: "50%", width: 20, height: 20, fontSize: 11, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center" }}>{cartCount}</span>}
-              🛒 Listem
-            </button>
-          )}
+
         </div>
         {viewOnly
           ? <div style={{ background: "rgba(232,160,32,0.1)", border: "1px solid rgba(232,160,32,0.25)", borderRadius: 10, padding: "7px 12px", fontSize: 12, color: "#c8a060", marginBottom: 10, display: "inline-block" }}>👁 Vitrin görünümü — sipariş için masanızdaki QR kodu okutun</div>
@@ -934,7 +928,7 @@ function MenuPage({ tableId, onBack, viewOnly = false }) {
       </div>
 
       {/* ITEMS GRID */}
-      <div style={{ padding: "16px 14px 100px", display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(160px,1fr))", gap: 14 }}>
+      <div style={{ padding: "16px 14px 180px", display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(160px,1fr))", gap: 14 }}>
         {cat?.items.filter(i => i.avail).map(item => (
           <MenuItemCard
                   key={item.id}
@@ -965,62 +959,57 @@ function MenuPage({ tableId, onBack, viewOnly = false }) {
         />
       )}
 
-      {/* FLOATING ÇAĞRI BUTONU */}
+      {/* SABİT ALT ÇUBUK — Listem + Garson Çağır + Hesap İste */}
       {!viewOnly && (
-        <div style={{ position: "fixed", bottom: 24, right: 20, zIndex: 150, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 10 }}>
-
-          {/* Açılmış seçenekler */}
-          {showCallMenu && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "flex-end" }}>
-
-              {/* Garson Çağır */}
-              <button onClick={async () => {
-                const s = gs();
-                s.tableCalls = s.tableCalls || {};
-                s.tableCalls[tableId] = { type: "garson", time: new Date().toLocaleTimeString("tr-TR"), read: false, timestamp: Date.now() };
-                ss(s); refresh();
-                await pushCallToSb(tableId, s.tableCalls[tableId]);
-                setCallSent("garson");
-                setShowCallMenu(false);
-                setTimeout(() => setCallSent(null), 4000);
-              }} style={{ display: "flex", alignItems: "center", gap: 12, background: "#e8a020", color: "#1c0e00", border: "none", borderRadius: 50, padding: "14px 22px", fontSize: 16, fontWeight: 700, cursor: "pointer", boxShadow: "0 6px 20px rgba(232,160,32,0.5)", fontFamily: "inherit", whiteSpace: "nowrap" }}>
-                <span style={{ fontSize: 22 }}>🙋</span> Garson Çağır
-              </button>
-
-              {/* Hesap İste */}
-              <button onClick={async () => {
-                const s = gs();
-                s.tableCalls = s.tableCalls || {};
-                s.tableCalls[tableId] = { type: "hesap", time: new Date().toLocaleTimeString("tr-TR"), read: false, timestamp: Date.now() };
-                ss(s); refresh();
-                await pushCallToSb(tableId, s.tableCalls[tableId]);
-                setCallSent("hesap");
-                setShowCallMenu(false);
-                setTimeout(() => setCallSent(null), 4000);
-              }} style={{ display: "flex", alignItems: "center", gap: 12, background: "#b83a0c", color: "#fff", border: "none", borderRadius: 50, padding: "14px 22px", fontSize: 16, fontWeight: 700, cursor: "pointer", boxShadow: "0 6px 20px rgba(184,58,12,0.5)", fontFamily: "inherit", whiteSpace: "nowrap" }}>
-                <span style={{ fontSize: 22 }}>🧾</span> Hesap İste
-              </button>
-            </div>
-          )}
-
+        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 150, background: "linear-gradient(180deg,rgba(15,7,0,0) 0%,rgba(15,7,0,0.98) 18px,#0f0700 100%)", paddingTop: 18, paddingBottom: "env(safe-area-inset-bottom, 12px)" }}>
+          
           {/* Başarı mesajı */}
           {callSent && (
-            <div style={{ background: "#16a34a", color: "#fff", borderRadius: 20, padding: "10px 18px", fontSize: 14, fontWeight: 600, boxShadow: "0 4px 16px rgba(0,0,0,0.3)", whiteSpace: "nowrap" }}>
-              {callSent === "garson" ? "🙋 Garson yolda!" : "🧾 Hesap geliyor!"}
+            <div style={{ textAlign: "center", marginBottom: 8 }}>
+              <span style={{ background: "#16a34a", color: "#fff", borderRadius: 20, padding: "7px 20px", fontSize: 13, fontWeight: 700, boxShadow: "0 4px 12px rgba(0,0,0,0.3)" }}>
+                {callSent === "garson" ? "🙋 Garson yolda!" : "🧾 Hesap geliyor!"}
+              </span>
             </div>
           )}
 
-          {/* Ana FAB butonu */}
-          <button
-            onClick={() => setShowCallMenu(p => !p)}
-            style={{ width: 60, height: 60, borderRadius: "50%", background: showCallMenu ? "#555" : "#1c0e00", border: "2px solid #e8a020", color: "#e8a020", fontSize: 26, cursor: "pointer", boxShadow: "0 6px 20px rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", transition: "all .2s", transform: showCallMenu ? "rotate(45deg)" : "none" }}>
-            {showCallMenu ? "✕" : "🔔"}
-          </button>
+          <div style={{ display: "flex", gap: 8, padding: "0 12px 12px" }}>
+            {/* Listem */}
+            <button onClick={() => setShowCart(true)}
+              style={{ position: "relative", flex: 1, background: cartCount ? "#b83a0c" : "rgba(255,255,255,0.10)", border: "none", color: "#fff", borderRadius: 14, padding: "14px 10px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontSize: 14, fontWeight: 700, fontFamily: "inherit" }}>
+              {cartCount > 0 && (
+                <span style={{ position: "absolute", top: -6, right: -4, background: "#e8a020", color: "#1c0e00", borderRadius: "50%", width: 20, height: 20, fontSize: 11, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center" }}>{cartCount}</span>
+              )}
+              🛒 Listem
+            </button>
+
+            {/* Garson Çağır */}
+            <button onClick={async () => {
+              const s = gs();
+              if (!Array.isArray(s.tableCalls)) s.tableCalls = [];
+              s.tableCalls.push({ tableId, type: "garson", time: new Date().toLocaleTimeString("tr-TR"), read: false, timestamp: Date.now() });
+              ss(s); refresh();
+              await pushCallToSb(tableId, { type: "garson", time: new Date().toLocaleTimeString("tr-TR"), timestamp: Date.now() });
+              setCallSent("garson");
+              setTimeout(() => setCallSent(null), 4000);
+            }} style={{ flex: 1, background: "#e8a020", color: "#1c0e00", border: "none", borderRadius: 14, padding: "14px 10px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 13, fontWeight: 700, fontFamily: "inherit" }}>
+              🙋 Garson
+            </button>
+
+            {/* Hesap İste */}
+            <button onClick={async () => {
+              const s = gs();
+              if (!Array.isArray(s.tableCalls)) s.tableCalls = [];
+              s.tableCalls.push({ tableId, type: "hesap", time: new Date().toLocaleTimeString("tr-TR"), read: false, timestamp: Date.now() });
+              ss(s); refresh();
+              await pushCallToSb(tableId, { type: "hesap", time: new Date().toLocaleTimeString("tr-TR"), timestamp: Date.now() });
+              setCallSent("hesap");
+              setTimeout(() => setCallSent(null), 4000);
+            }} style={{ flex: 1, background: "#b83a0c", color: "#fff", border: "none", borderRadius: 14, padding: "14px 10px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 13, fontWeight: 700, fontFamily: "inherit" }}>
+              🧾 Hesap
+            </button>
+          </div>
         </div>
       )}
-
-      {/* Dışarı tıklayınca kapat */}
-      {showCallMenu && <div onClick={() => setShowCallMenu(false)} style={{ position: "fixed", inset: 0, zIndex: 149 }} />}
     </div>
   );
 }
@@ -3695,7 +3684,7 @@ function WaiterPage({ onBack }) {
   const pendingResCount = (store.reservations || []).filter(r => r.date >= today && r.status === "beklemede").length;
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f5f0ea", fontFamily: "'Lato',sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "#f5f0ea", fontFamily: "'Lato',Georgia,sans-serif" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Lato:wght@400;700&display=swap');
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
@@ -3745,7 +3734,7 @@ function WaiterPage({ onBack }) {
       </div>
 
       {/* İçerik — Admin panel bileşenlerini direkt kullan */}
-      <div style={{ padding: 16, maxWidth: 700, margin: "0 auto" }}>
+      <div style={{ padding: "16px", maxWidth: 900, margin: "0 auto" }}>
         {tab === "siparisler" && <ActiveOrdersTab refresh={refresh} />}
         {tab === "cagrilar" && (
           activeCalls.length === 0 ? (
