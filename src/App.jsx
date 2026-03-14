@@ -355,6 +355,7 @@ function gs() {
 function ss(s) {
   window.__store = s;
   try { localStorage.setItem(LS_KEY, JSON.stringify(s)); } catch(e) {}
+  notifyStoreUpdate();
 }
 // Global store event — tüm useStore hook'larını tetikler
 const _storeListeners = new Set();
@@ -3458,8 +3459,12 @@ function KitchenPage({ onBack }) {
         });
       } catch(e) {}
     }
-    if (knownIds.current.size === 0) allOrders.forEach(o => knownIds.current.add(o.id));
-  }, [store.activeOrders, auth]);
+    // Seed: ilk yüklemede mevcut siparişleri bilinen olarak işaretle
+    const allExisting = Object.values(store.activeOrders).flat();
+    if (knownIds.current.size === 0 && allExisting.length > 0) {
+      allExisting.forEach(o => knownIds.current.add(o.id));
+    }
+  }, [JSON.stringify(Object.keys(store.activeOrders)), auth]);
 
   const attempt = () => {
     const saved = gs().kitchenPassword || "1234";
@@ -3789,7 +3794,8 @@ function WaiterPage({ onBack }) {
               <div>Aktif masa yok</div>
             </div>
           ) : activeTables.map(([tid, orders]) => {
-            const pending = orders.filter(o => o.status !== "teslim edildi");
+            const pending = orders.filter(o => o.status !== "teslim edildi").sort((a,b) => (a.timestamp||0)-(b.timestamp||0));
+            const delivered = orders.filter(o => o.status === "teslim edildi").sort((a,b) => (a.timestamp||0)-(b.timestamp||0));
             const allDelivered = orders.length > 0 && orders.every(o => o.status === "teslim edildi");
             const grandTotal = orders.reduce((s, o) => s + o.total, 0);
             const hasReady = orders.some(o => o.status === "hazır");
@@ -3819,7 +3825,7 @@ function WaiterPage({ onBack }) {
                   </div>
                 </div>
 
-                {/* Siparişler */}
+                {/* Aktif Siparişler */}
                 {pending.map(order => (
                   <div key={order.id} style={{ borderBottom: "1px solid #f5ede5", padding: "10px 16px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
@@ -3838,13 +3844,15 @@ function WaiterPage({ onBack }) {
                     {order.note && <div style={{ marginTop: 6, background: "#fff9f0", borderRadius: 6, padding: "5px 8px", fontSize: 11, color: "#e8a020" }}>📝 {order.note}</div>}
                     {/* 3 küçük buton */}
                     <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
-                      {/* Hazır butonu — hazırlanıyor durumunda aktif, hazır durumunda disabled yeşil */}
+                      {/* Hazır butonu */}
                       <button
-                        onClick={() => order.status === "hazırlanıyor" && setOrderStatus(tid, order.id, "hazır")}
+                        onClick={() => (order.status === "hazırlanıyor") && setOrderStatus(tid, order.id, "hazır")}
                         style={{
-                          flex: 1, border: "none", borderRadius: 8, padding: "8px 6px", fontSize: 12, fontWeight: 700, cursor: order.status === "hazırlanıyor" ? "pointer" : "default",
-                          background: order.status === "hazır" ? "#16a34a" : order.status === "hazırlanıyor" ? "#dcfce7" : "#f3f4f6",
-                          color: order.status === "hazır" ? "#fff" : order.status === "hazırlanıyor" ? "#166534" : "#bbb",
+                          flex: 1, border: order.status === "hazırlanıyor" ? "2px solid #16a34a" : "none",
+                          borderRadius: 8, padding: "8px 6px", fontSize: 12, fontWeight: 700,
+                          cursor: order.status === "hazırlanıyor" ? "pointer" : "default",
+                          background: order.status === "hazır" ? "#16a34a" : order.status === "hazırlanıyor" ? "#f0fdf4" : "#f3f4f6",
+                          color: order.status === "hazır" ? "#fff" : order.status === "hazırlanıyor" ? "#16a34a" : "#bbb",
                           transition: "all .3s"
                         }}>
                         {order.status === "hazır" ? "✅ Hazır" : "✅ Hazır"}
@@ -3869,6 +3877,27 @@ function WaiterPage({ onBack }) {
                     </div>
                   </div>
                 ))}
+
+                {/* Teslim Edildi (soluk, altta) */}
+                {delivered.length > 0 && (
+                  <div style={{ borderTop: "2px dashed #e8d5c5", marginTop: 4 }}>
+                    <div style={{ padding: "6px 16px", fontSize: 11, color: "#bbb", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>✓ Teslim Edilenler</div>
+                    {delivered.map(order => (
+                      <div key={order.id} style={{ padding: "8px 16px", borderBottom: "1px solid #f5ede5", opacity: 0.55 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                          <span style={{ background: "#f3f4f6", color: "#9ca3af", borderRadius: 20, padding: "2px 10px", fontSize: 11, fontWeight: 700 }}>✓ Teslim Edildi</span>
+                          <span style={{ color: "#ccc", fontSize: 11 }}>{order.time}</span>
+                        </div>
+                        {order.items.map((item, i) => (
+                          <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "2px 0", color: "#aaa" }}>
+                            <span>{item.qty}× {item.name}</span>
+                            <span>{fmt(item.price * item.qty)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             );
           })
