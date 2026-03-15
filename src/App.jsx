@@ -3814,11 +3814,11 @@ function WaiterPage({ onBack }) {
               </div>
               <div style={{ background: "#fff", border: `2px solid ${hasReady ? "#22c55e" : "#e5d5c5"}`, borderRadius: "4px 16px 16px 16px", width: "88%", overflow: "hidden", boxShadow: hasReady ? "0 0 12px rgba(34,197,94,0.25)" : "0 2px 10px rgba(0,0,0,0.07)", transition: "all .3s" }}>
                 {/* Masa header */}
-                <div style={{ background: "#1c0e00", padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                    <span style={{ color: "#e8a020", fontWeight: 700, fontSize: 16, fontFamily: "'Playfair Display',serif" }}>Masa {tid}</span>
-                    {hasReady && <span style={{ background: "#22c55e", color: "#fff", borderRadius: 20, padding: "1px 8px", fontSize: 11, fontWeight: 700, animation: "pulse 1s infinite" }}>✅ HAZIR</span>}
-                    {durationMin !== null && <span style={{ color: "#7a5535", fontSize: 11 }}>⏱ {durationMin} dk</span>}
+                <div style={{ background: "#1c0e00", padding: "13px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                    <span style={{ color: "#e8a020", fontWeight: 700, fontSize: 20, fontFamily: "'Playfair Display',serif" }}>Masa {tid}</span>
+                    {hasReady && <span style={{ background: "#22c55e", color: "#fff", borderRadius: 20, padding: "3px 10px", fontSize: 13, fontWeight: 700, animation: "pulse 1s infinite" }}>✅ HAZIR</span>}
+                    {durationMin !== null && <span style={{ color: "#7a5535", fontSize: 13 }}>⏱ {durationMin} dk</span>}
                     {(Array.isArray(store.tableCalls)?store.tableCalls:[]).filter(c=>c.tableId==tid&&!c.read).map(call=>(
                       <span key={call.orderId||call.type} style={{ background: call.type==="hesap"?"#ef4444":"#e8a020", color: call.type==="hesap"?"#fff":"#1c0e00", borderRadius:20, padding:"1px 8px", fontSize:11, fontWeight:700 }}>
                         {call.type==="hesap"?"🧾":"🙋"}
@@ -3844,36 +3844,36 @@ function WaiterPage({ onBack }) {
                 {pending.map(order => {
                   const sc = SC[order.status] || { bg:"#f3f4f6", col:"#555", dot:"#999" };
                   return (
-                    <div key={order.id} style={{ padding:"10px 14px", borderBottom:"1px solid #f5ede5", borderLeft:`4px solid ${sc.dot}` }}>
-                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
-                        <span style={{ color:"#aaa", fontSize:11 }}>{order.time}</span>
+                    <div key={order.id} style={{ padding:"14px 18px", borderBottom:"1px solid #f5ede5", borderLeft:`5px solid ${sc.dot}` }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+                        <span style={{ color:"#aaa", fontSize:13 }}>{order.time}</span>
                         {order.status === "hazır" ? (
-                          <span style={{ background:"#16a34a", color:"#fff", borderRadius:20, padding:"3px 10px", fontSize:12, fontWeight:700, animation:"hazirPulse 1s infinite" }}>✅ Hazır!</span>
+                          <span style={{ background:"#16a34a", color:"#fff", borderRadius:20, padding:"4px 12px", fontSize:14, fontWeight:700, animation:"hazirPulse 1s infinite" }}>✅ Hazır!</span>
                         ) : (
-                          <span style={{ background:sc.bg, color:sc.col, borderRadius:20, padding:"2px 10px", fontSize:11, fontWeight:700 }}>{sc.label}</span>
+                          <span style={{ background:sc.bg, color:sc.col, borderRadius:20, padding:"3px 12px", fontSize:13, fontWeight:700 }}>{sc.label}</span>
                         )}
                       </div>
                       {order.items.map((item,i)=>(
-                        <div key={i} style={{ display:"flex", justifyContent:"space-between", fontSize:13, padding:"2px 0", color:"#444" }}>
+                        <div key={i} style={{ display:"flex", justifyContent:"space-between", fontSize:15, padding:"4px 0", color:"#444" }}>
                           <span>{item.qty}× {item.name}{item.variants&&Object.keys(item.variants).length>0?" ("+Object.values(item.variants).join(", ")+")":""}</span>
-                          <span style={{ color:"#b83a0c" }}>{fmt(item.price*item.qty)}</span>
+                          <span style={{ color:"#b83a0c", fontWeight:600 }}>{fmt(item.price*item.qty)}</span>
                         </div>
                       ))}
-                      {order.note && <div style={{ marginTop:4, background:"#fffbf5", borderRadius:6, padding:"4px 8px", fontSize:11, color:"#888" }}>📝 {order.note}</div>}
-                      <div style={{ display:"flex", gap:5, marginTop:8, flexWrap:"wrap", alignItems:"center" }}>
-                        <strong style={{ color:"#b83a0c", fontSize:13, marginRight:4 }}>{fmt(order.total)}</strong>
+                      {order.note && <div style={{ marginTop:6, background:"#fffbf5", borderRadius:6, padding:"6px 10px", fontSize:13, color:"#888" }}>📝 {order.note}</div>}
+                      <div style={{ display:"flex", gap:7, marginTop:10, flexWrap:"wrap", alignItems:"center" }}>
+                        <strong style={{ color:"#b83a0c", fontSize:15, marginRight:4 }}>{fmt(order.total)}</strong>
                         {order.status !== "hazır" ? (
-                          <button onClick={()=>{}} style={{ background:"#f3f4f6", color:"#ccc", borderRadius:8, padding:"4px 9px", fontSize:11, fontWeight:700, cursor:"not-allowed", border:"1px solid #e5e7eb" }}>✏️ Düzenle</button>
+                          <button onClick={()=>{}} style={{ background:"#f3f4f6", color:"#ccc", borderRadius:8, padding:"6px 12px", fontSize:13, fontWeight:700, cursor:"not-allowed", border:"1px solid #e5e7eb" }}>✏️ Düzenle</button>
                         ) : (
-                          <span style={{ background:"#f3f4f6", color:"#ccc", borderRadius:8, padding:"4px 9px", fontSize:11, fontWeight:700, cursor:"not-allowed", border:"1px solid #e5e7eb" }}>✏️ Düzenle</span>
+                          <span style={{ background:"#f3f4f6", color:"#ccc", borderRadius:8, padding:"6px 12px", fontSize:13, fontWeight:700, cursor:"not-allowed", border:"1px solid #e5e7eb" }}>✏️ Düzenle</span>
                         )}
-                        {order.status === "hazırlanıyor" && <button onClick={async()=>{const s=gs();s.activeOrders[tid]=s.activeOrders[tid].map(o=>o.id===order.id?{...o,status:"hazır"}:o);ss(s);refresh();await pushOrderToSb({...order,status:"hazır"});}} style={{ background:"#fef3c722", border:"1px solid #f59e0b", color:"#92400e", borderRadius:8, padding:"4px 9px", fontSize:11, fontWeight:700, cursor:"pointer" }}>🍳 Hazırlanıyor</button>}
-                        {order.status === "beklemede" && <button onClick={async()=>{const s=gs();s.activeOrders[tid]=s.activeOrders[tid].map(o=>o.id===order.id?{...o,status:"hazır"}:o);ss(s);refresh();await pushOrderToSb({...order,status:"hazır"});}} style={{ background:"#dcfce722", border:"1px solid #16a34a", color:"#16a34a", borderRadius:8, padding:"4px 9px", fontSize:11, fontWeight:700, cursor:"pointer" }}>✅ Hazır</button>}
+                        {order.status === "hazırlanıyor" && <button onClick={async()=>{const s=gs();s.activeOrders[tid]=s.activeOrders[tid].map(o=>o.id===order.id?{...o,status:"hazır"}:o);ss(s);refresh();await pushOrderToSb({...order,status:"hazır"});}} style={{ background:"#fef3c722", border:"1px solid #f59e0b", color:"#92400e", borderRadius:8, padding:"6px 12px", fontSize:13, fontWeight:700, cursor:"pointer" }}>🍳 Hazırlanıyor</button>}
+                        {order.status === "beklemede" && <button onClick={async()=>{const s=gs();s.activeOrders[tid]=s.activeOrders[tid].map(o=>o.id===order.id?{...o,status:"hazır"}:o);ss(s);refresh();await pushOrderToSb({...order,status:"hazır"});}} style={{ background:"#dcfce722", border:"1px solid #16a34a", color:"#16a34a", borderRadius:8, padding:"6px 12px", fontSize:13, fontWeight:700, cursor:"pointer" }}>✅ Hazır</button>}
                         {order.status === "hazır" && <>
-                          <button onClick={async()=>{const s=gs();s.activeOrders[tid]=s.activeOrders[tid].map(o=>o.id===order.id?{...o,status:"hazırlanıyor"}:o);ss(s);refresh();await pushOrderToSb({...order,status:"hazırlanıyor"});}} style={{ background:"#fef3c722", border:"1px solid #f59e0b", color:"#92400e", borderRadius:8, padding:"4px 9px", fontSize:11, fontWeight:700, cursor:"pointer" }}>↩ Geri Al</button>
-                          <button onClick={async()=>{const s=gs();s.activeOrders[tid]=s.activeOrders[tid].map(o=>o.id===order.id?{...o,status:"teslim edildi"}:o);ss(s);refresh();await pushOrderToSb({...order,status:"teslim edildi"});}} style={{ background:"#d1fae522", border:"1px solid #10b981", color:"#065f46", borderRadius:8, padding:"4px 9px", fontSize:11, fontWeight:700, cursor:"pointer" }}>🚀 Teslim Et</button>
+                          <button onClick={async()=>{const s=gs();s.activeOrders[tid]=s.activeOrders[tid].map(o=>o.id===order.id?{...o,status:"hazırlanıyor"}:o);ss(s);refresh();await pushOrderToSb({...order,status:"hazırlanıyor"});}} style={{ background:"#fef3c722", border:"1px solid #f59e0b", color:"#92400e", borderRadius:8, padding:"6px 12px", fontSize:13, fontWeight:700, cursor:"pointer" }}>↩ Geri Al</button>
+                          <button onClick={async()=>{const s=gs();s.activeOrders[tid]=s.activeOrders[tid].map(o=>o.id===order.id?{...o,status:"teslim edildi"}:o);ss(s);refresh();await pushOrderToSb({...order,status:"teslim edildi"});}} style={{ background:"#d1fae522", border:"1px solid #10b981", color:"#065f46", borderRadius:8, padding:"6px 12px", fontSize:13, fontWeight:700, cursor:"pointer" }}>🚀 Teslim Et</button>
                         </>}
-                        {order.status !== "hazır" && <span style={{ background:"#f3f4f6", color:"#ccc", borderRadius:8, padding:"4px 9px", fontSize:11, fontWeight:700, cursor:"not-allowed", border:"1px solid #e5e7eb" }}>🚀 Teslim Et</span>}
+                        {order.status !== "hazır" && <span style={{ background:"#f3f4f6", color:"#ccc", borderRadius:8, padding:"6px 12px", fontSize:13, fontWeight:700, cursor:"not-allowed", border:"1px solid #e5e7eb" }}>🚀 Teslim Et</span>}
                       </div>
                     </div>
                   );
@@ -3918,24 +3918,24 @@ function WaiterPage({ onBack }) {
               <div style={{ fontSize:13, fontWeight:800, letterSpacing:1, textTransform:"uppercase", color:"#1d4ed8", marginBottom:5, paddingLeft:4 }}>
                 📅 Rezervasyon
               </div>
-              <div style={{ background: isPending ? "#eff6ff" : "#f0fdf4", border:`2px solid ${isPending?"#93c5fd":"#86efac"}`, borderRadius:"4px 16px 16px 16px", padding:"12px 16px", width:"82%", boxShadow:"0 2px 8px rgba(0,0,0,0.06)" }}>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:8 }}>
+              <div style={{ background: isPending ? "#eff6ff" : "#f0fdf4", border:`2.5px solid ${isPending?"#93c5fd":"#86efac"}`, borderRadius:"4px 16px 16px 16px", padding:"16px 20px", width:"85%", boxShadow:"0 2px 12px rgba(0,0,0,0.07)" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
                   <div>
-                    <div style={{ fontWeight:700, fontSize:15, color:"#1e293b" }}>{r.name}</div>
-                    <div style={{ color:"#64748b", fontSize:12, marginTop:2 }}>{r.phone}</div>
+                    <div style={{ fontWeight:700, fontSize:18, color:"#1e293b" }}>{r.name}</div>
+                    <div style={{ color:"#64748b", fontSize:14, marginTop:3 }}>{r.phone}</div>
                   </div>
-                  <span style={{ background:isPending?"#dbeafe":"#dcfce7", color:isPending?"#1d4ed8":"#166534", borderRadius:20, padding:"2px 10px", fontSize:11, fontWeight:700 }}>
+                  <span style={{ background:isPending?"#dbeafe":"#dcfce7", color:isPending?"#1d4ed8":"#166534", borderRadius:20, padding:"4px 12px", fontSize:13, fontWeight:700 }}>
                     {isPending?"⏳ Bekliyor":"✓ Onaylı"}
                   </span>
                 </div>
-                <div style={{ display:"flex", gap:12, fontSize:13, color:"#64748b", flexWrap:"wrap", marginBottom:isPending?10:0 }}>
+                <div style={{ display:"flex", gap:14, fontSize:15, color:"#64748b", flexWrap:"wrap", marginBottom:isPending?12:0 }}>
                   <span>📅 {r.date}</span><span>🕐 {r.time}</span><span>👥 {r.guests} kişi</span>
                   {r.note && <span>📝 {r.note}</span>}
                 </div>
                 {isPending && (
                   <div style={{ display:"flex", gap:8 }}>
-                    <button onClick={async()=>{const s=gs();const res=s.reservations.find(x=>x.id===r.id);s.reservations=s.reservations.map(x=>x.id===r.id?{...x,status:"onaylı"}:x);ss(s);refresh();if(res)await pushReservationToSb({...res,status:"onaylı"});}} style={{ flex:1, background:"#16a34a", color:"#fff", border:"none", borderRadius:8, padding:"8px", fontSize:13, fontWeight:700, cursor:"pointer" }}>✓ Onayla</button>
-                    <button onClick={async()=>{const s=gs();const res=s.reservations.find(x=>x.id===r.id);s.reservations=s.reservations.map(x=>x.id===r.id?{...x,status:"iptal"}:x);ss(s);refresh();if(res)await pushReservationToSb({...res,status:"iptal"});}} style={{ flex:1, background:"#dc2626", color:"#fff", border:"none", borderRadius:8, padding:"8px", fontSize:13, fontWeight:700, cursor:"pointer" }}>✕ İptal</button>
+                    <button onClick={async()=>{const s=gs();const res=s.reservations.find(x=>x.id===r.id);s.reservations=s.reservations.map(x=>x.id===r.id?{...x,status:"onaylı"}:x);ss(s);refresh();if(res)await pushReservationToSb({...res,status:"onaylı"});}} style={{ flex:1, background:"#16a34a", color:"#fff", border:"none", borderRadius:10, padding:"11px", fontSize:15, fontWeight:700, cursor:"pointer" }}>✓ Onayla</button>
+                    <button onClick={async()=>{const s=gs();const res=s.reservations.find(x=>x.id===r.id);s.reservations=s.reservations.map(x=>x.id===r.id?{...x,status:"iptal"}:x);ss(s);refresh();if(res)await pushReservationToSb({...res,status:"iptal"});}} style={{ flex:1, background:"#dc2626", color:"#fff", border:"none", borderRadius:10, padding:"11px", fontSize:15, fontWeight:700, cursor:"pointer" }}>✕ İptal</button>
                   </div>
                 )}
               </div>
