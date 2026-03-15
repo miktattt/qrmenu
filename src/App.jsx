@@ -3765,17 +3765,18 @@ function WaiterPage({ onBack }) {
 
         {/* Çağrılar — sağa yanaşık, sarı/kırmızı */}
         {activeCalls.map((call, idx) => (
-          <div key={call.orderId || idx} style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", marginBottom: 10 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", color: call.type === "hesap" ? "#dc2626" : "#92400e", marginBottom: 4, paddingRight: 4 }}>
-              {call.type === "hesap" ? "🧾 HESAP TALEBİ" : "🔔 GARSON ÇAĞRISI"}
-            </div>
-            <div style={{ background: call.type === "hesap" ? "#fff1f2" : "#fffbeb", border: `2px solid ${call.type === "hesap" ? "#f87171" : "#fbbf24"}`, borderRadius: "16px 4px 16px 16px", padding: "12px 16px", width: "85%", boxShadow: "0 2px 10px rgba(0,0,0,0.08)" }}>
+          <div key={call.orderId || idx} style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", marginBottom: 14 }}>
+            <div style={{ background: call.type === "hesap" ? "#fff1f2" : "#fffbeb", border: `2.5px solid ${call.type === "hesap" ? "#f87171" : "#fbbf24"}`, borderRadius: "16px 4px 16px 16px", padding: "16px 20px", width: "88%", boxShadow: call.type === "hesap" ? "0 4px 16px rgba(248,113,113,0.2)" : "0 4px 16px rgba(251,191,36,0.2)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <span style={{ fontSize: 28 }}>{call.type === "hesap" ? "🧾" : "🙋"}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                  <span style={{ fontSize: 40 }}>{call.type === "hesap" ? "🧾" : "🙋"}</span>
                   <div>
-                    <div style={{ fontFamily: "'Playfair Display',serif", fontWeight: 900, fontSize: 20, color: "#1c0e00" }}>Masa {call.tableId}</div>
-                    <div style={{ color: "#aaa", fontSize: 12, marginTop: 2 }}>{call.time}</div>
+                    {/* Not: kutucuğun içinde, masa numarasının hemen üstünde */}
+                    <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", color: call.type === "hesap" ? "#dc2626" : "#92400e", marginBottom: 5 }}>
+                      {call.type === "hesap" ? "🧾 Hesap Talebi" : "🔔 Garson Çağrısı"}
+                    </div>
+                    <div style={{ fontFamily: "'Playfair Display',serif", fontWeight: 900, fontSize: 26, color: "#1c0e00", lineHeight: 1 }}>Masa {call.tableId}</div>
+                    <div style={{ color: "#aaa", fontSize: 13, marginTop: 4 }}>{call.time}</div>
                   </div>
                 </div>
                 <button onClick={async () => {
@@ -3783,7 +3784,7 @@ function WaiterPage({ onBack }) {
                   const calls = Array.isArray(s.tableCalls) ? s.tableCalls : [];
                   const c = calls.find(c => c.orderId === call.orderId);
                   if (c) { c.read = true; ss(s); refresh(); if (c.orderId) await sbDelete("orders", c.orderId); }
-                }} style={{ background: "#16a34a", color: "#fff", border: "none", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                }} style={{ background: "#16a34a", color: "#fff", border: "none", borderRadius: 12, padding: "12px 20px", fontSize: 15, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>
                   ✓ Görüldü
                 </button>
               </div>
@@ -3808,8 +3809,8 @@ function WaiterPage({ onBack }) {
           };
           return (
             <div key={tid} style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", marginBottom: 14 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", color: "#b83a0c", marginBottom: 4, paddingLeft: 4 }}>
-                🍽️ SİPARİŞ
+              <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", color: "#b83a0c", marginBottom: 5, paddingLeft: 4 }}>
+                🍽️ Sipariş
               </div>
               <div style={{ background: "#fff", border: `2px solid ${hasReady ? "#22c55e" : "#e5d5c5"}`, borderRadius: "4px 16px 16px 16px", width: "88%", overflow: "hidden", boxShadow: hasReady ? "0 0 12px rgba(34,197,94,0.25)" : "0 2px 10px rgba(0,0,0,0.07)", transition: "all .3s" }}>
                 {/* Masa header */}
@@ -3914,8 +3915,8 @@ function WaiterPage({ onBack }) {
           const isPending = r.status === "beklemede";
           return (
             <div key={r.id} style={{ display:"flex", flexDirection:"column", alignItems:"flex-start", marginBottom:10 }}>
-              <div style={{ fontSize:10, fontWeight:700, letterSpacing:1.2, textTransform:"uppercase", color:"#1d4ed8", marginBottom:4, paddingLeft:4 }}>
-                📅 REZERVASYON
+              <div style={{ fontSize:13, fontWeight:800, letterSpacing:1, textTransform:"uppercase", color:"#1d4ed8", marginBottom:5, paddingLeft:4 }}>
+                📅 Rezervasyon
               </div>
               <div style={{ background: isPending ? "#eff6ff" : "#f0fdf4", border:`2px solid ${isPending?"#93c5fd":"#86efac"}`, borderRadius:"4px 16px 16px 16px", padding:"12px 16px", width:"82%", boxShadow:"0 2px 8px rgba(0,0,0,0.06)" }}>
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:8 }}>
