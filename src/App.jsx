@@ -793,10 +793,9 @@ function MenuPage({ tableId, onBack, viewOnly = false }) {
 
   // Sipariş geçmişi popup
   if (showHistory) {
-    const myOrders = [
-      ...(store.activeOrders[tableId] || []),
-      ...(store.completedOrders || []).filter(o => String(o.tableId) === String(tableId)),
-    ].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)).slice(0, 20);
+    // Sadece aktif siparişleri göster — masa kapanınca completedOrders'a taşınır, orada gösterme
+    const myOrders = (store.activeOrders[tableId] || [])
+      .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 
     return (
       <div style={{ minHeight: "100vh", background: "#fffbf5", fontFamily: "'Lato',sans-serif", padding: 20 }}>
@@ -1254,6 +1253,7 @@ function AdminPanel({ onBack }) {
         @keyframes toastIn { from { transform: translateY(-80px) scale(0.95); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
         @keyframes toastOut { from { opacity: 1; } to { opacity: 0; transform: translateY(-20px); } }
         @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(184,58,12,0.5); } 50% { box-shadow: 0 0 0 10px rgba(184,58,12,0); } }
+        @keyframes hazirPulse { 0%,100% { background:#16a34a; box-shadow:0 0 8px rgba(22,163,74,0.4); } 50% { background:#22c55e; box-shadow:0 0 20px rgba(34,197,94,0.8); } }
       `}</style>
 
       {/* ── TOAST NOTIFICATION ── */}
@@ -1985,7 +1985,11 @@ function OrderCard({ order, tid, sc, onEdit, onSetStatus, onCancel, isDelivered,
     <div style={{ background: dimmed ? "#f9fdf9" : "#fff", borderRadius: 12, padding: "12px 14px", marginBottom: 8, border: `1px solid ${dimmed ? "#d1fae5" : "#f0e8de"}`, borderLeft: `4px solid ${s.dot}`, opacity: dimmed ? 0.85 : 1, transition: "opacity .2s" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
         <span style={{ color: "#aaa", fontSize: 11 }}>{order.time}</span>
-        <span style={{ background: s.bg, color: s.col, borderRadius: 20, padding: "2px 10px", fontSize: 11, fontWeight: 700 }}>{s.label || order.status}</span>
+        {order.status === "hazır" ? (
+          <span style={{ background: "#16a34a", color: "#fff", borderRadius: 20, padding: "5px 14px", fontSize: 14, fontWeight: 700, boxShadow: "0 0 10px rgba(22,163,74,0.5)", animation: "hazirPulse 1s infinite", letterSpacing: 0.3 }}>✅ Hazır!</span>
+        ) : (
+          <span style={{ background: s.bg, color: s.col, borderRadius: 20, padding: "2px 10px", fontSize: 11, fontWeight: 700 }}>{s.label || order.status}</span>
+        )}
       </div>
       {order.items.map((item, i) => (
         <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "2px 0", fontSize: 13, color: dimmed ? "#6b8f70" : "#444" }}>
@@ -3708,6 +3712,7 @@ function WaiterPage({ onBack }) {
         @keyframes readySlide{from{transform:translateY(-20px);opacity:0}to{transform:translateY(0);opacity:1}}
         @keyframes tabBlink{0%,100%{background:rgba(232,160,32,0.1)}50%{background:rgba(232,160,32,0.28)}}
         @keyframes toastIn{from{opacity:0;transform:translate(-50%,-16px)}to{opacity:1;transform:translate(-50%,0)}}
+        @keyframes hazirPulse{0%,100%{background:#16a34a;box-shadow:0 0 8px rgba(22,163,74,0.4)}50%{background:#22c55e;box-shadow:0 0 20px rgba(34,197,94,0.8)}}
       `}</style>
 
       {/* Header */}
