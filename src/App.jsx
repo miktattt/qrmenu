@@ -3898,9 +3898,14 @@ function WaiterPage({ onBack }) {
               <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", color: "#b83a0c", marginBottom: 5, paddingLeft: 4 }}>
                 🍽️ Sipariş
               </div>
-              <div style={{ background: "#fff", border: `2px solid ${hasReady ? "#22c55e" : "#e5d5c5"}`, borderRadius: "4px 16px 16px 16px", width: "88%", overflow: "hidden", boxShadow: hasReady ? "0 0 12px rgba(34,197,94,0.25)" : "0 2px 10px rgba(0,0,0,0.07)", transition: "all .3s" }}>
+              {(() => {
+                const borderCol = allDelivered ? "#1e40af" : hasReady ? "#16a34a" : orders.some(o=>o.status==="hazırlanıyor") ? "#f59e0b" : "#e5d5c5";
+                const shadowCol = allDelivered ? "rgba(30,64,175,0.2)" : hasReady ? "rgba(22,163,74,0.25)" : orders.some(o=>o.status==="hazırlanıyor") ? "rgba(245,158,11,0.2)" : "rgba(0,0,0,0.07)";
+                return null;
+              })()}
+              <div style={{ background: "#fff", border: `2.5px solid ${allDelivered ? "#1e40af" : hasReady ? "#16a34a" : orders.some(o=>o.status==="hazırlanıyor") ? "#f59e0b" : "#e5d5c5"}`, borderRadius: "4px 16px 16px 16px", width: "88%", overflow: "hidden", boxShadow: allDelivered ? "0 0 12px rgba(30,64,175,0.2)" : hasReady ? "0 0 12px rgba(22,163,74,0.25)" : orders.some(o=>o.status==="hazırlanıyor") ? "0 0 10px rgba(245,158,11,0.2)" : "0 2px 10px rgba(0,0,0,0.07)", transition: "all .3s" }}>
                 {/* Masa header */}
-                <div style={{ background: "#1c0e00", padding: "13px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ background: allDelivered ? "#1e3a8a" : hasReady ? "#15803d" : orders.some(o=>o.status==="hazırlanıyor") ? "#92400e" : "#1c0e00", padding: "13px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", transition: "background .3s" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                     <span style={{ color: "#e8a020", fontWeight: 700, fontSize: 20, fontFamily: "'Playfair Display',serif" }}>Masa {tid}</span>
                     {hasReady && <span style={{ background: "#22c55e", color: "#fff", borderRadius: 20, padding: "3px 10px", fontSize: 13, fontWeight: 700, animation: "pulse 1s infinite" }}>✅ HAZIR</span>}
@@ -3930,7 +3935,7 @@ function WaiterPage({ onBack }) {
                 {pending.map(order => {
                   const sc = SC[order.status] || { bg:"#f3f4f6", col:"#555", dot:"#999" };
                   return (
-                    <div key={order.id} style={{ padding:"14px 18px", borderBottom:"1px solid #f5ede5", borderLeft:`5px solid ${sc.dot}` }}>
+                    <div key={order.id} style={{ padding:"14px 18px", borderBottom:"1px solid #f5ede5", borderLeft:`5px solid ${sc.dot}`, background: order.status==="hazır" ? "#f0fdf4" : order.status==="hazırlanıyor" ? "#fffbeb" : "#fff", transition:"background .3s" }}>
                       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
                         <span style={{ color:"#aaa", fontSize:13 }}>{order.time}</span>
                         {order.status === "hazır" ? (
@@ -3968,17 +3973,17 @@ function WaiterPage({ onBack }) {
                 {delivered.length > 0 && (
                   <div>
                     <div style={{ margin:"10px 14px", position:"relative", display:"flex", alignItems:"center", gap:10 }}>
-                      <div style={{ flex:1, height:2, background:"linear-gradient(90deg,transparent,#10b981,transparent)", borderRadius:2 }} />
-                      <div style={{ background:"#d1fae5", color:"#065f46", borderRadius:20, padding:"3px 12px", fontSize:11, fontWeight:700, whiteSpace:"nowrap", flexShrink:0 }}>
+                      <div style={{ flex:1, height:2, background:"linear-gradient(90deg,transparent,#3b82f6,transparent)", borderRadius:2 }} />
+                      <div style={{ background:"#dbeafe", color:"#1d4ed8", borderRadius:20, padding:"3px 12px", fontSize:11, fontWeight:700, whiteSpace:"nowrap", flexShrink:0 }}>
                         ✓ Teslim Edilenler — {fmt(delivered.reduce((s,o)=>s+o.total,0))}
                       </div>
-                      <div style={{ flex:1, height:2, background:"linear-gradient(90deg,#10b981,transparent)", borderRadius:2 }} />
+                      <div style={{ flex:1, height:2, background:"linear-gradient(90deg,#3b82f6,transparent)", borderRadius:2 }} />
                     </div>
                     {delivered.map(order=>(
-                      <div key={order.id} style={{ padding:"8px 14px", borderBottom:"1px solid #d1fae5", background:"#f9fdf9", borderLeft:"4px solid #10b981" }}>
+                      <div key={order.id} style={{ padding:"8px 14px", borderBottom:"1px solid #dbeafe", background:"#eff6ff", borderLeft:"5px solid #3b82f6" }}>
                         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4 }}>
                           <span style={{ color:"#aaa", fontSize:11 }}>{order.time}</span>
-                          <span style={{ background:"#d1fae5", color:"#065f46", borderRadius:20, padding:"2px 8px", fontSize:11, fontWeight:700 }}>✓ Teslim Edildi</span>
+                          <span style={{ background:"#dbeafe", color:"#1d4ed8", borderRadius:20, padding:"2px 8px", fontSize:11, fontWeight:700 }}>✓ Teslim Edildi</span>
                         </div>
                         {order.items.map((item,i)=>(
                           <div key={i} style={{ display:"flex", justifyContent:"space-between", fontSize:13, padding:"2px 0", color:"#6b8f70" }}>
