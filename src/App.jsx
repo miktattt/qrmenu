@@ -3898,11 +3898,6 @@ function WaiterPage({ onBack }) {
               <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", color: "#b83a0c", marginBottom: 5, paddingLeft: 4 }}>
                 🍽️ Sipariş
               </div>
-              {(() => {
-                const borderCol = allDelivered ? "#1e40af" : hasReady ? "#16a34a" : orders.some(o=>o.status==="hazırlanıyor") ? "#f59e0b" : "#e5d5c5";
-                const shadowCol = allDelivered ? "rgba(30,64,175,0.2)" : hasReady ? "rgba(22,163,74,0.25)" : orders.some(o=>o.status==="hazırlanıyor") ? "rgba(245,158,11,0.2)" : "rgba(0,0,0,0.07)";
-                return null;
-              })()}
               <div style={{ background: "#fff", border: `2.5px solid ${allDelivered ? "#1e40af" : hasReady ? "#16a34a" : orders.some(o=>o.status==="hazırlanıyor") ? "#f59e0b" : "#e5d5c5"}`, borderRadius: "4px 16px 16px 16px", width: "88%", overflow: "hidden", boxShadow: allDelivered ? "0 0 12px rgba(30,64,175,0.2)" : hasReady ? "0 0 12px rgba(22,163,74,0.25)" : orders.some(o=>o.status==="hazırlanıyor") ? "0 0 10px rgba(245,158,11,0.2)" : "0 2px 10px rgba(0,0,0,0.07)", transition: "all .3s" }}>
                 {/* Masa header */}
                 <div style={{ background: allDelivered ? "#1e3a8a" : hasReady ? "#15803d" : orders.some(o=>o.status==="hazırlanıyor") ? "#92400e" : "#1c0e00", padding: "13px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", transition: "background .3s" }}>
