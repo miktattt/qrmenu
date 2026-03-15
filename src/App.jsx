@@ -576,6 +576,91 @@ function AdminLogin({ onSuccess, onBack }) {
           ← Ana Sayfaya Dön
         </button>
       </div>
+
+      {/* Sipariş Düzenleme Popup */}
+      {editOrder && (() => {
+        const addToEdit = (menuItem) => {
+          setEditOrder(p => {
+            const items = [...p.order.items];
+            const existing = items.findIndex(i => i.id === menuItem.id && !i.variants);
+            if (existing >= 0) items[existing] = { ...items[existing], qty: items[existing].qty + 1 };
+            else items.push({ ...menuItem, qty: 1 });
+            return { ...p, order: { ...p.order, items } };
+          });
+        };
+        return (
+          <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.6)", zIndex:400, display:"flex", alignItems:"flex-end", justifyContent:"center" }} onClick={() => setEditOrder(null)}>
+            <div style={{ background:"#fff", borderRadius:"20px 20px 0 0", width:"100%", maxWidth:500, maxHeight:"90vh", display:"flex", flexDirection:"column" }} onClick={e => e.stopPropagation()}>
+              <div style={{ padding:"16px 20px 12px", borderBottom:"1px solid #f0e8de", display:"flex", justifyContent:"space-between", alignItems:"center", flexShrink:0 }}>
+                <div style={{ fontWeight:700, fontSize:17, color:"#1c0e00" }}>✏️ Sipariş Düzenle — Masa {editOrder.tid}</div>
+                <button onClick={() => setEditOrder(null)} style={{ background:"none", border:"none", fontSize:20, cursor:"pointer", color:"#888" }}>✕</button>
+              </div>
+              <div style={{ overflowY:"auto", flex:1, padding:"0 20px" }}>
+                <div style={{ paddingTop:12 }}>
+                  <div style={{ fontSize:11, fontWeight:700, color:"#a07850", letterSpacing:1, textTransform:"uppercase", marginBottom:8 }}>Siparişteki Ürünler</div>
+                  {editOrder.order.items.length === 0 && <div style={{ color:"#ccc", fontSize:13, padding:"8px 0 12px" }}>Sepet boş</div>}
+                  {editOrder.order.items.map((item, i) => (
+                    <div key={i} style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 0", borderBottom:"1px solid #f5ede5" }}>
+                      <div style={{ flex:1, fontSize:14, fontWeight:600, color:"#3a2010" }}>
+                        {item.name}{item.variants&&Object.keys(item.variants).length>0?" ("+Object.values(item.variants).join(", ")+")":""}
+                      </div>
+                      <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                        <button onClick={() => setEditOrder(p => { const items=[...p.order.items]; if(items[i].qty>1)items[i]={...items[i],qty:items[i].qty-1};else items.splice(i,1); return{...p,order:{...p.order,items}}; })} style={{ background:"#fee2e2", color:"#b91c1c", border:"none", borderRadius:6, width:28, height:28, fontSize:16, cursor:"pointer" }}>−</button>
+                        <span style={{ fontWeight:700, minWidth:22, textAlign:"center", color:"#b83a0c", fontSize:14 }}>{item.qty}</span>
+                        <button onClick={() => setEditOrder(p => { const items=[...p.order.items]; items[i]={...items[i],qty:items[i].qty+1}; return{...p,order:{...p.order,items}}; })} style={{ background:"#dcfce7", color:"#166534", border:"none", borderRadius:6, width:28, height:28, fontSize:16, cursor:"pointer" }}>+</button>
+                      </div>
+                      <span style={{ color:"#b83a0c", minWidth:52, textAlign:"right", fontSize:13, fontWeight:600 }}>{fmt(item.price*item.qty)}</span>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ paddingTop:16, paddingBottom:4 }}>
+                  <div style={{ fontSize:11, fontWeight:700, color:"#a07850", letterSpacing:1, textTransform:"uppercase", marginBottom:10 }}>Menüden Ekle</div>
+                  {gs().categories.filter(c=>c.items.some(i=>i.avail)).map(cat => (
+                    <div key={cat.id} style={{ marginBottom:14 }}>
+                      <div style={{ fontSize:12, fontWeight:700, color:"#b83a0c", marginBottom:6 }}>{cat.icon} {cat.name}</div>
+                      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))", gap:6 }}>
+                        {cat.items.filter(i=>i.avail).map(menuItem => {
+                          const inCart = editOrder.order.items.find(i=>i.id===menuItem.id);
+                          return (
+                            <button key={menuItem.id} onClick={() => addToEdit(menuItem)}
+                              style={{ background:inCart?"#fff5f2":"#f9f6f2", border:inCart?"1.5px solid #b83a0c":"1.5px solid #e5d5c5", borderRadius:10, padding:"8px 10px", cursor:"pointer", textAlign:"left", fontFamily:"inherit" }}>
+                              <div style={{ fontSize:12, fontWeight:600, color:"#3a2010", marginBottom:2 }}>{menuItem.name}</div>
+                              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                                <span style={{ fontSize:12, color:"#b83a0c", fontWeight:700 }}>{fmt(menuItem.price)}</span>
+                                {inCart && <span style={{ fontSize:11, color:"#b83a0c", fontWeight:700 }}>×{inCart.qty}</span>}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <textarea value={editOrder.order.note||""} onChange={e => setEditOrder(p=>({...p,order:{...p.order,note:e.target.value}}))} rows={2} placeholder="Sipariş notu..."
+                  style={{ width:"100%", marginTop:4, marginBottom:4, border:"1px solid #f0e8de", borderRadius:8, padding:"8px 10px", fontSize:13, fontFamily:"inherit", resize:"none", boxSizing:"border-box", outline:"none" }} />
+              </div>
+              <div style={{ padding:"12px 20px 20px", borderTop:"1px solid #f0e8de", flexShrink:0, background:"#fff" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:12 }}>
+                  <span style={{ color:"#888", fontSize:14 }}>Toplam</span>
+                  <span style={{ fontWeight:700, color:"#b83a0c", fontSize:18 }}>{fmt(editOrder.order.items.reduce((s,i)=>s+i.price*i.qty,0))}</span>
+                </div>
+                <button onClick={async () => {
+                  const s = gs();
+                  const newTotal = editOrder.order.items.reduce((sum,i)=>sum+i.price*i.qty,0);
+                  const updated = {...editOrder.order, total:newTotal};
+                  if(s.activeOrders[editOrder.tid]) {
+                    s.activeOrders[editOrder.tid] = s.activeOrders[editOrder.tid].map(o=>o.id===updated.id?updated:o);
+                    ss(s); refresh(); await pushOrderToSb(updated);
+                  }
+                  setEditOrder(null);
+                }} style={{ width:"100%", background:"#16a34a", color:"#fff", border:"none", borderRadius:10, padding:"13px", fontSize:15, fontWeight:700, cursor:"pointer" }}>
+                  💾 Kaydet
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -3630,6 +3715,7 @@ function WaiterPage({ onBack }) {
   const [err, setErr] = useState(false);
   const [shake, setShake] = useState(false);
   const [tab, setTab] = useState("siparisler");
+  const [editOrder, setEditOrder] = useState(null);
   const { store, refresh } = useStore();
   const realtimeChannel = useRef(null);
   const knownReadyIds = useRef(new Set());
@@ -3863,7 +3949,7 @@ function WaiterPage({ onBack }) {
                       <div style={{ display:"flex", gap:7, marginTop:10, flexWrap:"wrap", alignItems:"center" }}>
                         <strong style={{ color:"#b83a0c", fontSize:15, marginRight:4 }}>{fmt(order.total)}</strong>
                         {order.status !== "hazır" ? (
-                          <button onClick={()=>{}} style={{ background:"#f3f4f6", color:"#ccc", borderRadius:8, padding:"6px 12px", fontSize:13, fontWeight:700, cursor:"not-allowed", border:"1px solid #e5e7eb" }}>✏️ Düzenle</button>
+                          <button onClick={()=>setEditOrder&&setEditOrder({order:{...order,items:[...order.items]},tid})} style={{ background:"#ede9fe", color:"#7c3aed", borderRadius:8, padding:"6px 12px", fontSize:13, fontWeight:700, cursor:"pointer", border:"1px solid #c4b5fd" }}>✏️ Düzenle</button>
                         ) : (
                           <span style={{ background:"#f3f4f6", color:"#ccc", borderRadius:8, padding:"6px 12px", fontSize:13, fontWeight:700, cursor:"not-allowed", border:"1px solid #e5e7eb" }}>✏️ Düzenle</span>
                         )}
