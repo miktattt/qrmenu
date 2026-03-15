@@ -3752,67 +3752,196 @@ function WaiterPage({ onBack }) {
         </div>
       )}
 
-      {/* Sekmeler */}
-      <div style={{ display: "flex", background: "#fff", borderBottom: "2px solid #e8e0d5", overflowX: "auto" }}>
-        {[
-          { id: "siparisler",     label: `Siparişler${pendingCount ? ` 🔴${pendingCount}` : ""}` },
-          { id: "cagrilar",       label: `🔔 Çağrılar${callCount ? ` ${callCount}` : ""}`, blink: callCount > 0 },
-          { id: "rezervasyonlar", label: `📅 Rezervasyonlar${pendingResCount ? ` 🟡${pendingResCount}` : ""}` },
-        ].map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)}
-            style={{ flex: "1 0 auto", padding: "13px 10px", border: "none",
-              borderBottom: tab === t.id ? "3px solid #b83a0c" : "3px solid transparent",
-              background: "none",
-              color: tab === t.id ? "#b83a0c" : t.blink ? "#e8a020" : "#888",
-              fontWeight: tab === t.id || t.blink ? 700 : 400, fontSize: 13,
-              cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
-              animation: t.blink && tab !== t.id ? "tabBlink 1s infinite" : "none" }}>
-            {t.label}
-          </button>
-        ))}
-      </div>
+      {/* BİRLEŞİK AKIŞ — Sekmesiz */}
+      <div style={{ padding: "12px 10px", maxWidth: 900, margin: "0 auto" }}>
 
-      {/* İçerik — Admin panel bileşenlerini direkt kullan */}
-      <div style={{ padding: "16px", maxWidth: 900, margin: "0 auto" }}>
-        {tab === "siparisler" && <ActiveOrdersTab refresh={refresh} />}
-        {tab === "cagrilar" && (
-          activeCalls.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "60px 0", color: "#bbb" }}>
-              <div style={{ fontSize: 48, marginBottom: 12 }}>🔔</div>
-              <div>Bekleyen çağrı yok</div>
+        {/* Boş durum */}
+        {pendingCount === 0 && callCount === 0 && pendingResCount === 0 && (
+          <div style={{ textAlign: "center", padding: "80px 0", color: "#bbb" }}>
+            <div style={{ fontSize: 56, marginBottom: 12 }}>✅</div>
+            <div style={{ fontSize: 16 }}>Her şey yolunda, bekleyen yok</div>
+          </div>
+        )}
+
+        {/* Çağrılar — sağa yanaşık, sarı/kırmızı */}
+        {activeCalls.map((call, idx) => (
+          <div key={call.orderId || idx} style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", marginBottom: 10 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", color: call.type === "hesap" ? "#dc2626" : "#92400e", marginBottom: 4, paddingRight: 4 }}>
+              {call.type === "hesap" ? "🧾 HESAP TALEBİ" : "🔔 GARSON ÇAĞRISI"}
             </div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {activeCalls.map((call, idx) => (
-                <div key={call.orderId || idx} style={{ background: "#fff", borderRadius: 14, padding: "14px 16px", border: `2px solid ${call.type === "hesap" ? "#ef4444" : "#e8a020"}`, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                      <span style={{ fontSize: 36 }}>{call.type === "hesap" ? "🧾" : "🙋"}</span>
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: 15, color: call.type === "hesap" ? "#dc2626" : "#92400e" }}>
-                          {call.type === "hesap" ? "Hesap İsteniyor" : "Garson Çağrısı"}
-                        </div>
-                        <div style={{ marginTop: 4 }}>
-                          <span style={{ fontFamily: "'Playfair Display',serif", fontWeight: 900, fontSize: 22, color: "#1c0e00" }}>Masa {call.tableId}</span>
-                          <span style={{ color: "#bbb", fontSize: 12, marginLeft: 8 }}>{call.time}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <button onClick={async () => {
-                      const s = gs();
-                      const calls = Array.isArray(s.tableCalls) ? s.tableCalls : [];
-                      const c = calls.find(c => c.orderId === call.orderId);
-                      if (c) { c.read = true; ss(s); refresh(); if (c.orderId) await sbDelete("orders", c.orderId); }
-                    }} style={{ background: "#16a34a", color: "#fff", border: "none", borderRadius: 10, padding: "10px 18px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
-                      ✓ Görüldü
-                    </button>
+            <div style={{ background: call.type === "hesap" ? "#fff1f2" : "#fffbeb", border: `2px solid ${call.type === "hesap" ? "#f87171" : "#fbbf24"}`, borderRadius: "16px 4px 16px 16px", padding: "12px 16px", width: "85%", boxShadow: "0 2px 10px rgba(0,0,0,0.08)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: 28 }}>{call.type === "hesap" ? "🧾" : "🙋"}</span>
+                  <div>
+                    <div style={{ fontFamily: "'Playfair Display',serif", fontWeight: 900, fontSize: 20, color: "#1c0e00" }}>Masa {call.tableId}</div>
+                    <div style={{ color: "#aaa", fontSize: 12, marginTop: 2 }}>{call.time}</div>
                   </div>
                 </div>
-              ))}
+                <button onClick={async () => {
+                  const s = gs();
+                  const calls = Array.isArray(s.tableCalls) ? s.tableCalls : [];
+                  const c = calls.find(c => c.orderId === call.orderId);
+                  if (c) { c.read = true; ss(s); refresh(); if (c.orderId) await sbDelete("orders", c.orderId); }
+                }} style={{ background: "#16a34a", color: "#fff", border: "none", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                  ✓ Görüldü
+                </button>
+              </div>
             </div>
-          )
-        )}
-        {tab === "rezervasyonlar" && <AdminReservationTab refresh={refresh} />}
+          </div>
+        ))}
+
+        {/* Siparişler — sola yanaşık, koyu */}
+        {Object.entries(store.activeOrders).sort(([a],[b]) => Number(a)-Number(b)).map(([tid, orders]) => {
+          const pending = orders.filter(o => o.status !== "teslim edildi");
+          const delivered = orders.filter(o => o.status === "teslim edildi");
+          const hasReady = orders.some(o => o.status === "hazır");
+          const grandTotal = orders.reduce((s,o) => s+o.total, 0);
+          const allDelivered = orders.length > 0 && orders.every(o => o.status === "teslim edildi");
+          const openedAt = gs().tableOpenedAt?.[tid];
+          const durationMin = openedAt ? Math.round((Date.now()-openedAt)/60000) : null;
+          const SC = {
+            beklemede:      { bg:"#fef3c7", col:"#92400e", dot:"#f59e0b", label:"Beklemede" },
+            "hazırlanıyor": { bg:"#fef3c7", col:"#92400e", dot:"#f59e0b", label:"🍳 Hazırlanıyor" },
+            "hazır":        { bg:"#dcfce7", col:"#16a34a", dot:"#16a34a", label:"✅ Hazır" },
+            "teslim edildi":{ bg:"#f3f4f6", col:"#9ca3af", dot:"#d1d5db", label:"Teslim Edildi" },
+          };
+          return (
+            <div key={tid} style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", marginBottom: 14 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", color: "#b83a0c", marginBottom: 4, paddingLeft: 4 }}>
+                🍽️ SİPARİŞ
+              </div>
+              <div style={{ background: "#fff", border: `2px solid ${hasReady ? "#22c55e" : "#e5d5c5"}`, borderRadius: "4px 16px 16px 16px", width: "88%", overflow: "hidden", boxShadow: hasReady ? "0 0 12px rgba(34,197,94,0.25)" : "0 2px 10px rgba(0,0,0,0.07)", transition: "all .3s" }}>
+                {/* Masa header */}
+                <div style={{ background: "#1c0e00", padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <span style={{ color: "#e8a020", fontWeight: 700, fontSize: 16, fontFamily: "'Playfair Display',serif" }}>Masa {tid}</span>
+                    {hasReady && <span style={{ background: "#22c55e", color: "#fff", borderRadius: 20, padding: "1px 8px", fontSize: 11, fontWeight: 700, animation: "pulse 1s infinite" }}>✅ HAZIR</span>}
+                    {durationMin !== null && <span style={{ color: "#7a5535", fontSize: 11 }}>⏱ {durationMin} dk</span>}
+                    {(Array.isArray(store.tableCalls)?store.tableCalls:[]).filter(c=>c.tableId==tid&&!c.read).map(call=>(
+                      <span key={call.orderId||call.type} style={{ background: call.type==="hesap"?"#ef4444":"#e8a020", color: call.type==="hesap"?"#fff":"#1c0e00", borderRadius:20, padding:"1px 8px", fontSize:11, fontWeight:700 }}>
+                        {call.type==="hesap"?"🧾":"🙋"}
+                      </span>
+                    ))}
+                  </div>
+                  <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+                    <span style={{ color:"#e8a020", fontWeight:700, fontSize:13 }}>{fmt(grandTotal)}</span>
+                    <button onClick={()=>{const [setPM] = [null]; /* printModal handled by parent */}} style={{ display:"none" }} />
+                    {allDelivered && (
+                      <button onClick={async()=>{
+                        const s=gs(); s.completedOrders=s.completedOrders||[];
+                        const allItems={}; let gt=0;
+                        orders.forEach(o=>{o.items.forEach(item=>{if(!allItems[item.id])allItems[item.id]={...item,qty:0};allItems[item.id].qty+=item.qty;});gt+=o.total;});
+                        s.completedOrders.push({id:Date.now(),tableId:Number(tid),items:Object.values(allItems),total:gt,time:orders[0]?.time||"",date:orders[0]?.date||new Date().toLocaleDateString("tr-TR"),completedAt:new Date().toLocaleString("tr-TR"),completedTimestamp:Date.now(),orderCount:orders.length});
+                        await Promise.all(orders.map(o=>pushOrderToSb({...o,status:"tamamlandı"})));
+                        delete s.activeOrders[tid]; ss(s); refresh();
+                      }} style={{ background:"#6d28d9", color:"#fff", border:"none", borderRadius:8, padding:"4px 10px", fontSize:11, fontWeight:700, cursor:"pointer" }}>✅ Kapat</button>
+                    )}
+                  </div>
+                </div>
+                {/* Sipariş kartları */}
+                {pending.map(order => {
+                  const sc = SC[order.status] || { bg:"#f3f4f6", col:"#555", dot:"#999" };
+                  return (
+                    <div key={order.id} style={{ padding:"10px 14px", borderBottom:"1px solid #f5ede5", borderLeft:`4px solid ${sc.dot}` }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
+                        <span style={{ color:"#aaa", fontSize:11 }}>{order.time}</span>
+                        {order.status === "hazır" ? (
+                          <span style={{ background:"#16a34a", color:"#fff", borderRadius:20, padding:"3px 10px", fontSize:12, fontWeight:700, animation:"hazirPulse 1s infinite" }}>✅ Hazır!</span>
+                        ) : (
+                          <span style={{ background:sc.bg, color:sc.col, borderRadius:20, padding:"2px 10px", fontSize:11, fontWeight:700 }}>{sc.label}</span>
+                        )}
+                      </div>
+                      {order.items.map((item,i)=>(
+                        <div key={i} style={{ display:"flex", justifyContent:"space-between", fontSize:13, padding:"2px 0", color:"#444" }}>
+                          <span>{item.qty}× {item.name}{item.variants&&Object.keys(item.variants).length>0?" ("+Object.values(item.variants).join(", ")+")":""}</span>
+                          <span style={{ color:"#b83a0c" }}>{fmt(item.price*item.qty)}</span>
+                        </div>
+                      ))}
+                      {order.note && <div style={{ marginTop:4, background:"#fffbf5", borderRadius:6, padding:"4px 8px", fontSize:11, color:"#888" }}>📝 {order.note}</div>}
+                      <div style={{ display:"flex", gap:5, marginTop:8, flexWrap:"wrap", alignItems:"center" }}>
+                        <strong style={{ color:"#b83a0c", fontSize:13, marginRight:4 }}>{fmt(order.total)}</strong>
+                        {order.status !== "hazır" ? (
+                          <button onClick={()=>{}} style={{ background:"#f3f4f6", color:"#ccc", borderRadius:8, padding:"4px 9px", fontSize:11, fontWeight:700, cursor:"not-allowed", border:"1px solid #e5e7eb" }}>✏️ Düzenle</button>
+                        ) : (
+                          <span style={{ background:"#f3f4f6", color:"#ccc", borderRadius:8, padding:"4px 9px", fontSize:11, fontWeight:700, cursor:"not-allowed", border:"1px solid #e5e7eb" }}>✏️ Düzenle</span>
+                        )}
+                        {order.status === "hazırlanıyor" && <button onClick={async()=>{const s=gs();s.activeOrders[tid]=s.activeOrders[tid].map(o=>o.id===order.id?{...o,status:"hazır"}:o);ss(s);refresh();await pushOrderToSb({...order,status:"hazır"});}} style={{ background:"#fef3c722", border:"1px solid #f59e0b", color:"#92400e", borderRadius:8, padding:"4px 9px", fontSize:11, fontWeight:700, cursor:"pointer" }}>🍳 Hazırlanıyor</button>}
+                        {order.status === "beklemede" && <button onClick={async()=>{const s=gs();s.activeOrders[tid]=s.activeOrders[tid].map(o=>o.id===order.id?{...o,status:"hazır"}:o);ss(s);refresh();await pushOrderToSb({...order,status:"hazır"});}} style={{ background:"#dcfce722", border:"1px solid #16a34a", color:"#16a34a", borderRadius:8, padding:"4px 9px", fontSize:11, fontWeight:700, cursor:"pointer" }}>✅ Hazır</button>}
+                        {order.status === "hazır" && <>
+                          <button onClick={async()=>{const s=gs();s.activeOrders[tid]=s.activeOrders[tid].map(o=>o.id===order.id?{...o,status:"hazırlanıyor"}:o);ss(s);refresh();await pushOrderToSb({...order,status:"hazırlanıyor"});}} style={{ background:"#fef3c722", border:"1px solid #f59e0b", color:"#92400e", borderRadius:8, padding:"4px 9px", fontSize:11, fontWeight:700, cursor:"pointer" }}>↩ Geri Al</button>
+                          <button onClick={async()=>{const s=gs();s.activeOrders[tid]=s.activeOrders[tid].map(o=>o.id===order.id?{...o,status:"teslim edildi"}:o);ss(s);refresh();await pushOrderToSb({...order,status:"teslim edildi"});}} style={{ background:"#d1fae522", border:"1px solid #10b981", color:"#065f46", borderRadius:8, padding:"4px 9px", fontSize:11, fontWeight:700, cursor:"pointer" }}>🚀 Teslim Et</button>
+                        </>}
+                        {order.status !== "hazır" && <span style={{ background:"#f3f4f6", color:"#ccc", borderRadius:8, padding:"4px 9px", fontSize:11, fontWeight:700, cursor:"not-allowed", border:"1px solid #e5e7eb" }}>🚀 Teslim Et</span>}
+                      </div>
+                    </div>
+                  );
+                })}
+                {/* Teslim edilenler — admin paneli ile aynı stil */}
+                {delivered.length > 0 && (
+                  <div>
+                    <div style={{ margin:"10px 14px", position:"relative", display:"flex", alignItems:"center", gap:10 }}>
+                      <div style={{ flex:1, height:2, background:"linear-gradient(90deg,transparent,#10b981,transparent)", borderRadius:2 }} />
+                      <div style={{ background:"#d1fae5", color:"#065f46", borderRadius:20, padding:"3px 12px", fontSize:11, fontWeight:700, whiteSpace:"nowrap", flexShrink:0 }}>
+                        ✓ Teslim Edilenler — {fmt(delivered.reduce((s,o)=>s+o.total,0))}
+                      </div>
+                      <div style={{ flex:1, height:2, background:"linear-gradient(90deg,#10b981,transparent)", borderRadius:2 }} />
+                    </div>
+                    {delivered.map(order=>(
+                      <div key={order.id} style={{ padding:"8px 14px", borderBottom:"1px solid #d1fae5", background:"#f9fdf9", borderLeft:"4px solid #10b981" }}>
+                        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4 }}>
+                          <span style={{ color:"#aaa", fontSize:11 }}>{order.time}</span>
+                          <span style={{ background:"#d1fae5", color:"#065f46", borderRadius:20, padding:"2px 8px", fontSize:11, fontWeight:700 }}>✓ Teslim Edildi</span>
+                        </div>
+                        {order.items.map((item,i)=>(
+                          <div key={i} style={{ display:"flex", justifyContent:"space-between", fontSize:13, padding:"2px 0", color:"#6b8f70" }}>
+                            <span>{item.qty}× {item.name}{item.variants&&Object.keys(item.variants).length>0?" ("+Object.values(item.variants).join(", ")+")":""}</span>
+                            <span style={{ color:"#10b981" }}>{fmt(item.price*item.qty)}</span>
+                          </div>
+                        ))}
+                        <strong style={{ color:"#10b981", fontSize:13 }}>{fmt(order.total)}</strong>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Rezervasyonlar — sola yanaşık, mavi/lacivert */}
+        {(store.reservations||[]).filter(r=>r.date>=today&&r.status!=="iptal").sort((a,b)=>a.date.localeCompare(b.date)||a.time.localeCompare(b.time)).map(r => {
+          const isPending = r.status === "beklemede";
+          return (
+            <div key={r.id} style={{ display:"flex", flexDirection:"column", alignItems:"flex-start", marginBottom:10 }}>
+              <div style={{ fontSize:10, fontWeight:700, letterSpacing:1.2, textTransform:"uppercase", color:"#1d4ed8", marginBottom:4, paddingLeft:4 }}>
+                📅 REZERVASYON
+              </div>
+              <div style={{ background: isPending ? "#eff6ff" : "#f0fdf4", border:`2px solid ${isPending?"#93c5fd":"#86efac"}`, borderRadius:"4px 16px 16px 16px", padding:"12px 16px", width:"82%", boxShadow:"0 2px 8px rgba(0,0,0,0.06)" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:8 }}>
+                  <div>
+                    <div style={{ fontWeight:700, fontSize:15, color:"#1e293b" }}>{r.name}</div>
+                    <div style={{ color:"#64748b", fontSize:12, marginTop:2 }}>{r.phone}</div>
+                  </div>
+                  <span style={{ background:isPending?"#dbeafe":"#dcfce7", color:isPending?"#1d4ed8":"#166534", borderRadius:20, padding:"2px 10px", fontSize:11, fontWeight:700 }}>
+                    {isPending?"⏳ Bekliyor":"✓ Onaylı"}
+                  </span>
+                </div>
+                <div style={{ display:"flex", gap:12, fontSize:13, color:"#64748b", flexWrap:"wrap", marginBottom:isPending?10:0 }}>
+                  <span>📅 {r.date}</span><span>🕐 {r.time}</span><span>👥 {r.guests} kişi</span>
+                  {r.note && <span>📝 {r.note}</span>}
+                </div>
+                {isPending && (
+                  <div style={{ display:"flex", gap:8 }}>
+                    <button onClick={async()=>{const s=gs();const res=s.reservations.find(x=>x.id===r.id);s.reservations=s.reservations.map(x=>x.id===r.id?{...x,status:"onaylı"}:x);ss(s);refresh();if(res)await pushReservationToSb({...res,status:"onaylı"});}} style={{ flex:1, background:"#16a34a", color:"#fff", border:"none", borderRadius:8, padding:"8px", fontSize:13, fontWeight:700, cursor:"pointer" }}>✓ Onayla</button>
+                    <button onClick={async()=>{const s=gs();const res=s.reservations.find(x=>x.id===r.id);s.reservations=s.reservations.map(x=>x.id===r.id?{...x,status:"iptal"}:x);ss(s);refresh();if(res)await pushReservationToSb({...res,status:"iptal"});}} style={{ flex:1, background:"#dc2626", color:"#fff", border:"none", borderRadius:8, padding:"8px", fontSize:13, fontWeight:700, cursor:"pointer" }}>✕ İptal</button>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+
       </div>
     </div>
   );
